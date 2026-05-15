@@ -35,20 +35,22 @@ export interface OrgPositionRow {
   department_id: string | null;
 }
 
-export interface OrgDepartmentRow {
+/** Setor (filho de departamento) */
+export interface OrgSectorRow {
   id: string;
   name: string;
-  parent_id: string | null;
-  responsible_name: string | null;
-  responsible_id: string | null;
+  parent_id: string;
   member_count: number;
   positions: OrgPositionRow[];
 }
 
-export interface OrgSectorRow {
+/** Departamento (nível superior) */
+export interface OrgDepartmentRow {
   id: string;
   name: string;
-  departments: OrgDepartmentRow[];
+  responsible_name: string | null;
+  responsible_id: string | null;
+  sectors: OrgSectorRow[];
 }
 
 export interface DepartmentMemberRow {
@@ -78,7 +80,7 @@ export interface ManagerCandidate {
 }
 
 export async function getOrgStructureAction(): Promise<{
-  data?: OrgSectorRow[];
+  data?: OrgDepartmentRow[];
   error?: string;
 }> {
   const session = await requireAuth();
@@ -116,38 +118,37 @@ export async function getOrgStructureAction(): Promise<{
     positionsByDept.set(pos.department_id, list);
   });
 
-  const sectors: OrgSectorRow[] = [];
-  const deptByParent = new Map<string, OrgDepartmentRow[]>();
+  const topDepartments: OrgDepartmentRow[] = [];
+  const sectorsByParent = new Map<string, OrgSectorRow[]>();
 
   departments?.forEach((d) => {
-    const row: OrgDepartmentRow = {
-      id: d.id,
-      name: d.name,
-      parent_id: d.parent_id,
-      responsible_name: d.responsible_name,
-      responsible_id: d.responsible_id,
-      member_count: memberCountByDept.get(d.id) ?? 0,
-      positions: positionsByDept.get(d.id) ?? [],
-    };
-
     if (d.parent_id) {
-      const list = deptByParent.get(d.parent_id) ?? [];
-      list.push(row);
-      deptByParent.set(d.parent_id, list);
-    } else {
-      sectors.push({
+      const sector: OrgSectorRow = {
         id: d.id,
         name: d.name,
-        departments: [],
+        parent_id: d.parent_id,
+        member_count: memberCountByDept.get(d.id) ?? 0,
+        positions: positionsByDept.get(d.id) ?? [],
+      };
+      const list = sectorsByParent.get(d.parent_id) ?? [];
+      list.push(sector);
+      sectorsByParent.set(d.parent_id, list);
+    } else {
+      topDepartments.push({
+        id: d.id,
+        name: d.name,
+        responsible_name: d.responsible_name,
+        responsible_id: d.responsible_id,
+        sectors: [],
       });
     }
   });
 
-  sectors.forEach((sector) => {
-    sector.departments = deptByParent.get(sector.id) ?? [];
+  topDepartments.forEach((dept) => {
+    dept.sectors = sectorsByParent.get(dept.id) ?? [];
   });
 
-  return { data: sectors };
+  return { data: topDepartments };
 }
 
 export async function getDepartmentDetailAction(
@@ -176,24 +177,62 @@ export async function getDepartmentDetailAction(
     return { error: "Departamento não encontrado." };
   }
 
-  const [{ data: positions }, { data: members }] = await Promise.all([
-    supabase
-      .from("positions")
-      .select("id, name, department_id")
-      .eq("department_id", departmentId)
-      .order("name"),
-    supabase
-      .from("profiles")
-      .select(
-        `
-        id, full_name, email, status,
-        positions(name),
-        manager:profiles!profiles_manager_id_fkey(full_name)
-      `,
-      )
-      .eq("department_id", departmentId)
-      .order("full_name"),
-  ]);
+  const isDepartamento = department.parent_id === null;
+
+  let positions: OrgPositionRow[] = [];
+  let members: {
+    id: string;
+    full_name: string;
+    email: string;
+    status: string;
+    positions: unknown;
+    manager: unknown;
+  }[] = [];
+
+  if (isDepartamento) {
+    const { data: childSectors } = await supabase
+      .from("departments")
+      .select("id")
+      .eq("parent_id", departmentId);
+
+    const sectorIds = childSectors?.map((s) => s.id) ?? [];
+
+    if (sectorIds.length > 0) {
+      const { data: memberRows } = await supabase
+        .from("profiles")
+        .select(
+          `
+          id, full_name, email, status,
+          positions(name),
+          manager:profiles!profiles_manager_id_fkey(full_name)
+        `,
+        )
+        .in("department_id", sectorIds)
+        .order("full_name");
+      members = memberRows ?? [];
+    }
+  } else {
+    const [{ data: positionRows }, { data: memberRows }] = await Promise.all([
+      supabase
+        .from("positions")
+        .select("id, name, department_id")
+        .eq("department_id", departmentId)
+        .order("name"),
+      supabase
+        .from("profiles")
+        .select(
+          `
+          id, full_name, email, status,
+          positions(name),
+          manager:profiles!profiles_manager_id_fkey(full_name)
+        `,
+        )
+        .eq("department_id", departmentId)
+        .order("full_name"),
+    ]);
+    positions = positionRows ?? [];
+    members = memberRows ?? [];
+  }
 
   const parentRaw = department.parent as { name: string } | { name: string }[] | null;
   const parent = Array.isArray(parentRaw) ? parentRaw[0] : parentRaw;
@@ -255,75 +294,6 @@ export async function getManagerCandidatesAction(): Promise<{
   return { data: data ?? [] };
 }
 
-export async function createSectorAction(formData: FormData) {
-  const session = await requireAuth();
-  if (!canManageOrgStructure(session.profile)) {
-    return { error: "Sem permissão." };
-  }
-
-  const parsed = sectorSchema.safeParse({
-    name: formData.get("name"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors };
-  }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("departments")
-    .insert({ name: parsed.data.name, parent_id: null })
-    .select("id")
-    .single();
-
-  if (error) return { error: error.message };
-
-  await logAction({
-    userId: session.profile.id,
-    action: "department.created",
-    resourceType: "department",
-    resourceId: data.id,
-    metadata: { type: "sector", name: parsed.data.name },
-  });
-
-  revalidateOrg();
-  return { success: true, id: data.id };
-}
-
-export async function updateSectorAction(formData: FormData) {
-  const session = await requireAuth();
-  if (!canManageOrgStructure(session.profile)) {
-    return { error: "Sem permissão." };
-  }
-
-  const parsed = updateSectorSchema.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors };
-  }
-
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from("departments")
-    .update({ name: parsed.data.name })
-    .eq("id", parsed.data.id)
-    .is("parent_id", null);
-
-  if (error) return { error: error.message };
-
-  await logAction({
-    userId: session.profile.id,
-    action: "department.updated",
-    resourceType: "department",
-    resourceId: parsed.data.id,
-    metadata: { type: "sector", name: parsed.data.name },
-  });
-
-  revalidateOrg();
-  return { success: true };
-}
-
 export async function createDepartmentAction(formData: FormData) {
   const session = await requireAuth();
   if (!canManageOrgStructure(session.profile)) {
@@ -332,7 +302,6 @@ export async function createDepartmentAction(formData: FormData) {
 
   const parsed = departmentSchema.safeParse({
     name: formData.get("name"),
-    parent_id: formData.get("parent_id"),
     responsible_name: emptyToNull(formData.get("responsible_name")),
     responsible_id: emptyToNull(formData.get("responsible_id")),
   });
@@ -345,7 +314,7 @@ export async function createDepartmentAction(formData: FormData) {
     .from("departments")
     .insert({
       name: parsed.data.name,
-      parent_id: parsed.data.parent_id,
+      parent_id: null,
       responsible_name: parsed.data.responsible_name ?? null,
       responsible_id: parsed.data.responsible_id ?? null,
     })
@@ -375,7 +344,6 @@ export async function updateDepartmentAction(formData: FormData) {
   const parsed = updateDepartmentSchema.safeParse({
     id: formData.get("id"),
     name: formData.get("name"),
-    parent_id: formData.get("parent_id") || undefined,
     responsible_name: emptyToNull(formData.get("responsible_name")),
     responsible_id: emptyToNull(formData.get("responsible_id")),
   });
@@ -383,9 +351,13 @@ export async function updateDepartmentAction(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const { id, ...updates } = parsed.data;
+  const { id, name, responsible_name, responsible_id } = parsed.data;
   const admin = createAdminClient();
-  const { error } = await admin.from("departments").update(updates).eq("id", id);
+  const { error } = await admin
+    .from("departments")
+    .update({ name, responsible_name, responsible_id })
+    .eq("id", id)
+    .is("parent_id", null);
 
   if (error) return { error: error.message };
 
@@ -394,7 +366,82 @@ export async function updateDepartmentAction(formData: FormData) {
     action: "department.updated",
     resourceType: "department",
     resourceId: id,
-    metadata: updates,
+    metadata: { type: "department", name, responsible_name, responsible_id },
+  });
+
+  revalidateOrg();
+  return { success: true };
+}
+
+export async function createSectorAction(formData: FormData) {
+  const session = await requireAuth();
+  if (!canManageOrgStructure(session.profile)) {
+    return { error: "Sem permissão." };
+  }
+
+  const parsed = sectorSchema.safeParse({
+    name: formData.get("name"),
+    parent_id: formData.get("parent_id"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("departments")
+    .insert({
+      name: parsed.data.name,
+      parent_id: parsed.data.parent_id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await logAction({
+    userId: session.profile.id,
+    action: "department.created",
+    resourceType: "department",
+    resourceId: data.id,
+    metadata: { type: "sector", name: parsed.data.name },
+  });
+
+  revalidateOrg();
+  return { success: true, id: data.id };
+}
+
+export async function updateSectorAction(formData: FormData) {
+  const session = await requireAuth();
+  if (!canManageOrgStructure(session.profile)) {
+    return { error: "Sem permissão." };
+  }
+
+  const parsed = updateSectorSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    parent_id: formData.get("parent_id") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const { id, name, parent_id } = parsed.data;
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("departments")
+    .update({ name, parent_id })
+    .eq("id", id)
+    .not("parent_id", "is", null);
+
+  if (error) return { error: error.message };
+
+  await logAction({
+    userId: session.profile.id,
+    action: "department.updated",
+    resourceType: "department",
+    resourceId: id,
+    metadata: { type: "sector", name, parent_id },
   });
 
   revalidateOrg();
@@ -526,16 +573,16 @@ export async function deleteDepartmentAction(formData: FormData) {
 
   if (!dept) return { error: "Registro não encontrado." };
 
-  const isSector = dept.parent_id === null;
+  const isDepartamento = dept.parent_id === null;
 
-  if (isSector) {
+  if (isDepartamento) {
     const { count: childCount } = await admin
       .from("departments")
       .select("id", { count: "exact", head: true })
       .eq("parent_id", id);
     if (childCount && childCount > 0) {
       return {
-        error: "Não é possível excluir: o setor possui departamentos vinculados.",
+        error: "Não é possível excluir: o departamento possui setores vinculados.",
       };
     }
   } else {
@@ -545,7 +592,7 @@ export async function deleteDepartmentAction(formData: FormData) {
       .eq("department_id", id);
     if (posCount && posCount > 0) {
       return {
-        error: "Não é possível excluir: o departamento possui cargos vinculados.",
+        error: "Não é possível excluir: o setor possui cargos vinculados.",
       };
     }
   }
@@ -569,7 +616,7 @@ export async function deleteDepartmentAction(formData: FormData) {
     action: "department.deleted",
     resourceType: "department",
     resourceId: id,
-    metadata: { type: isSector ? "sector" : "department" },
+    metadata: { type: isDepartamento ? "department" : "sector" },
   });
 
   revalidateOrg();

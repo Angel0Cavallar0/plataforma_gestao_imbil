@@ -15,7 +15,7 @@ export default async function EstruturaPage() {
     getManagerCandidatesAction(),
   ]);
 
-  const sectors = structureResult.data ?? [];
+  const departments = structureResult.data ?? [];
   const managerCandidates = managersResult.data ?? [];
   const canManage = canManageOrgStructure(session.profile);
 
@@ -28,8 +28,8 @@ export default async function EstruturaPage() {
         </p>
       )}
       <OrgStructurePanel
-        key={sectors.map((s) => s.id).join("-")}
-        sectors={sectors}
+        key={departments.map((d) => d.id).join("-")}
+        departments={departments}
         canManage={canManage}
         managerCandidates={managerCandidates}
       />
