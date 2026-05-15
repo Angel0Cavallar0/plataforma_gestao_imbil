@@ -24,12 +24,15 @@ export function PasswordFlowPage({ type }: PasswordFlowPageProps) {
       }
     });
 
+    const hasAuthHash = window.location.hash.includes("access_token");
+
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setReady(true);
         return;
       }
 
+      const delay = hasAuthHash ? 1200 : 400;
       window.setTimeout(() => {
         void supabase.auth.getSession().then(({ data: { session: retrySession } }) => {
           if (retrySession) {
@@ -40,7 +43,7 @@ export function PasswordFlowPage({ type }: PasswordFlowPageProps) {
             );
           }
         });
-      }, 400);
+      }, delay);
     });
 
     return () => subscription.unsubscribe();

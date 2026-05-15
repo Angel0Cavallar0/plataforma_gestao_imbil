@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import { loginAction } from "@/server/actions/auth";
@@ -7,10 +8,18 @@ import { LoginSubmitButton } from "@/components/auth/login-submit-button";
 import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function LoginForm() {
-  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("auth_error");
+  const [error, setError] = useState<string | null>(authError);
   const [showForgot, setShowForgot] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

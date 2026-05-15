@@ -7,6 +7,7 @@ const AUTH_ROUTES = [
   "/trocar-senha",
   "/auth/callback",
   "/auth/confirm",
+  "/auth/complete",
 ];
 const PUBLIC_PREFIXES = ["/auth/"];
 
@@ -19,7 +20,8 @@ export async function middleware(request: NextRequest) {
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    // Raiz costuma ser o Site URL do Supabase; /auth/complete preserva o hash no cliente.
+    url.pathname = pathname === "/" ? "/auth/complete" : "/login";
     return NextResponse.redirect(url);
   }
 
