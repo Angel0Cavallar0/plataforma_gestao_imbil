@@ -4,6 +4,8 @@ import { z } from "zod";
 export const sectorSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
   parent_id: z.string().uuid("Departamento obrigatório"),
+  responsible_name: z.string().optional().nullable(),
+  responsible_id: z.string().uuid().optional().nullable(),
 });
 
 /** Departamento — nível superior (sem pai) */

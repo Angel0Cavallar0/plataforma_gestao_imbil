@@ -36,7 +36,14 @@ type DialogMode =
       responsibleId: string | null;
     }
   | { type: "sector-create"; parentId?: string }
-  | { type: "sector-edit"; id: string; parentId: string; name: string }
+  | {
+      type: "sector-edit";
+      id: string;
+      parentId: string;
+      name: string;
+      responsibleName: string | null;
+      responsibleId: string | null;
+    }
   | { type: "position-create"; sectorId: string }
   | null;
 
@@ -264,6 +271,8 @@ export function OrgStructurePanel({
                     id: detail.id,
                     parentId: detail.parent_id,
                     name: detail.name,
+                    responsibleName: detail.responsible_name,
+                    responsibleId: detail.responsible_id,
                   });
                 }
               }}
@@ -325,6 +334,8 @@ export function OrgStructurePanel({
               defaultValue: dialogMode.parentId,
               label: "Departamento",
             },
+            responsibleName: {},
+            responsibleId: { options: managerOptions },
           }}
           onSubmit={async (fd) => {
             const r = await createSectorAction(fd);
@@ -348,6 +359,11 @@ export function OrgStructurePanel({
               options: departmentOptions,
               defaultValue: dialogMode.parentId,
               label: "Departamento",
+            },
+            responsibleName: { defaultValue: dialogMode.responsibleName ?? "" },
+            responsibleId: {
+              options: managerOptions,
+              defaultValue: dialogMode.responsibleId ?? "",
             },
           }}
           onSubmit={async (fd) => {
@@ -424,21 +440,33 @@ function OrgDetailView({
         )}
       </div>
 
-      {isDepartamento && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium">Responsável</h3>
-          <dl className="grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-xs text-muted-foreground">Nome</dt>
-              <dd>{detail.responsible_name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Usuário vinculado</dt>
-              <dd>{detail.responsible_profile_name ?? "—"}</dd>
-            </div>
-          </dl>
-        </section>
+      {isDepartamento ? (
+        <p className="text-sm text-muted-foreground">
+          Altere nome e responsável em Editar. Só é possível excluir o departamento se não
+          houver setores vinculados.
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Altere o setor (nome, departamento pai e responsável) em Editar. Excluir remove
+          o setor se não houver cargos nem colaboradores vinculados.
+        </p>
       )}
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-medium">
+          {isDepartamento ? "Responsável pelo departamento" : "Responsável pelo setor"}
+        </h3>
+        <dl className="grid gap-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-muted-foreground">Nome</dt>
+            <dd>{detail.responsible_name ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Usuário vinculado</dt>
+            <dd>{detail.responsible_profile_name ?? "—"}</dd>
+          </div>
+        </dl>
+      </section>
 
       {!isDepartamento && (
         <section className="space-y-2">
