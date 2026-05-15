@@ -49,10 +49,32 @@ export default async function UsuariosPage() {
     .select("id, name")
     .order("display_order");
 
+  const { data: departments } = await supabase
+    .from("departments")
+    .select("id, name, parent_id, responsible_id")
+    .order("name");
+
+  const { data: positions } = await supabase
+    .from("positions")
+    .select("id, name, department_id")
+    .order("name");
+
+  const { data: managers } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("status", "ativo")
+    .order("full_name");
+
   return (
     <div className="space-y-6">
       {nav.canManageUsers && (
-        <CreateUserDialog roles={roles ?? []} modules={modules ?? []} />
+        <CreateUserDialog
+          roles={roles ?? []}
+          modules={modules ?? []}
+          departments={departments ?? []}
+          positions={positions ?? []}
+          managers={managers ?? []}
+        />
       )}
       <UsersTable users={users} nav={nav} />
     </div>
