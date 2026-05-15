@@ -33,3 +33,16 @@ export const updatePositionSchema = positionSchema.partial().extend({
 export const deleteDepartmentSchema = z.object({
   id: z.string().uuid(),
 });
+
+/** Setor + cargos no cadastro único de departamento */
+export const departmentBundleSectorSchema = z.object({
+  name: z.string().min(2, "Nome do setor obrigatório"),
+  positions: z.array(z.string().min(1).max(200)).max(50).default([]),
+});
+
+export const createDepartmentBundleSchema = z.object({
+  name: z.string().min(2, "Nome do departamento obrigatório"),
+  responsible_name: z.string().max(500).optional().nullable(),
+  responsible_id: z.string().uuid().optional().nullable(),
+  sectors: z.array(departmentBundleSectorSchema).max(30).default([]),
+});
