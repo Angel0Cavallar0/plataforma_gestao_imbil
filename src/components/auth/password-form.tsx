@@ -1,24 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Image from "next/image";
 import { setPasswordFromSessionAction } from "@/server/actions/auth";
+import { isPasswordValid } from "@/lib/auth/password-requirements";
+import { PasswordRequirementsChecklist } from "@/components/auth/password-requirements-checklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PasswordFormProps {
   type: "cadastrar" | "trocar";
 }
 
 export function PasswordForm({ type }: PasswordFormProps) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = useMemo(
+    () => isPasswordValid(password, confirmPassword),
+    [password, confirmPassword],
+  );
+
+  const title = type === "cadastrar" ? "Cadastrar senha" : "Trocar senha";
+  const subtitle =
+    type === "cadastrar"
+      ? "Defina sua senha de acesso à plataforma."
+      : "Informe sua nova senha de acesso.";
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -29,29 +39,58 @@ export function PasswordForm({ type }: PasswordFormProps) {
       setError(result.error.password[0]);
   }
 
-  const title = type === "cadastrar" ? "Cadastrar senha" : "Trocar senha";
-
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>
-          Mínimo 12 caracteres com maiúsculas, minúsculas, números e especiais. O link do
-          e-mail expira conforme a política configurada no Supabase Auth.
-        </CardDescription>
+      <CardHeader className="items-center space-y-4 text-center">
+        <Image
+          src="/imbil-logo.svg"
+          alt="Imbil"
+          width={180}
+          height={54}
+          priority
+          className="h-12 w-auto"
+        />
+        <div className="space-y-1">
+          <CardTitle className="text-xl">{title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
       </CardHeader>
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="password">Nova senha</Label>
-            <Input id="password" name="password" type="password" required />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
+
+          <PasswordRequirementsChecklist
+            password={password}
+            confirmPassword={confirmPassword}
+          />
+
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <Input id="confirmPassword" name="confirmPassword" type="password" required />
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
+
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full">
+
+          <Button type="submit" className="w-full" disabled={!canSubmit}>
             Salvar senha
           </Button>
         </form>
