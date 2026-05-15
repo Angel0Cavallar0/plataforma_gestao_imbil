@@ -6,7 +6,6 @@ import { ChevronDown, ChevronRight, Building2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  createDepartmentAction,
   createPositionAction,
   createSectorAction,
   deleteDepartmentAction,
@@ -19,6 +18,7 @@ import {
   updateSectorAction,
 } from "@/server/actions/org";
 import { OrgEntityDialog } from "@/components/org/org-entity-dialog";
+import { CreateDepartmentBundleDialog } from "@/components/org/create-department-bundle-dialog";
 
 interface OrgStructurePanelProps {
   departments: OrgDepartmentRow[];
@@ -55,6 +55,7 @@ export function OrgStructurePanel({
   const [detailError, setDetailError] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [departmentBundleKey, setDepartmentBundleKey] = useState(0);
 
   const managerOptions = managerCandidates.map((m) => ({
     id: m.id,
@@ -127,7 +128,13 @@ export function OrgStructurePanel({
     <div className="space-y-4">
       {canManage && (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => setDialogMode({ type: "department-create" })}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setDepartmentBundleKey((k) => k + 1);
+              setDialogMode({ type: "department-create" });
+            }}
+          >
             Novo departamento
           </Button>
         </div>
@@ -271,22 +278,12 @@ export function OrgStructurePanel({
       </div>
 
       {dialogMode?.type === "department-create" && (
-        <OrgEntityDialog
+        <CreateDepartmentBundleDialog
+          key={departmentBundleKey}
           open
           onOpenChange={(open) => !open && setDialogMode(null)}
-          title="Novo departamento"
-          description="Cadastre primeiro o departamento. Depois você poderá adicionar setores dentro dele."
-          submitLabel="Criar departamento"
-          fields={{
-            name: { label: "Nome do departamento" },
-            responsibleName: {},
-            responsibleId: { options: managerOptions },
-          }}
-          onSubmit={async (fd) => {
-            const r = await createDepartmentAction(fd);
-            if (r.success) refresh();
-            return r;
-          }}
+          managerCandidates={managerCandidates}
+          onSuccess={refresh}
         />
       )}
 

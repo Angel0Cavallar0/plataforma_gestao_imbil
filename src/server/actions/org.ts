@@ -6,6 +6,7 @@ import { logAction } from "@/lib/auth/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
+  createDepartmentBundleSchema,
   deleteDepartmentSchema,
   departmentSchema,
   positionSchema,
@@ -333,6 +334,110 @@ export async function createDepartmentAction(formData: FormData) {
 
   revalidateOrg();
   return { success: true, id: data.id };
+}
+
+export async function createDepartmentBundleAction(raw: unknown) {
+  const session = await requireAuth();
+  if (!canManageOrgStructure(session.profile)) {
+    return { error: "Sem permissão." };
+  }
+
+  const parsed = createDepartmentBundleSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const { name, responsible_name: rn, responsible_id, sectors: sectorList } = parsed.data;
+  const responsible_name = rn?.trim() ? rn.trim() : null;
+  const admin = createAdminClient();
+
+  const created = {
+    departmentId: null as string | null,
+    sectorIds: [] as string[],
+    positionIds: [] as string[],
+  };
+
+  try {
+    const { data: deptRow, error: deptErr } = await admin
+      .from("departments")
+      .insert({
+        name,
+        parent_id: null,
+        responsible_name,
+        responsible_id: responsible_id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (deptErr || !deptRow) {
+      throw new Error(deptErr?.message ?? "Erro ao criar departamento.");
+    }
+    created.departmentId = deptRow.id;
+
+    for (const sector of sectorList) {
+      const { data: secRow, error: secErr } = await admin
+        .from("departments")
+        .insert({
+          name: sector.name,
+          parent_id: created.departmentId,
+        })
+        .select("id")
+        .single();
+
+      if (secErr || !secRow) {
+        throw new Error(secErr?.message ?? "Erro ao criar setor.");
+      }
+      created.sectorIds.push(secRow.id);
+
+      for (const posName of sector.positions) {
+        const trimmed = posName.trim();
+        if (!trimmed) continue;
+        const { data: posRow, error: posErr } = await admin
+          .from("positions")
+          .insert({
+            name: trimmed,
+            department_id: secRow.id,
+          })
+          .select("id")
+          .single();
+
+        if (posErr || !posRow) {
+          throw new Error(posErr?.message ?? "Erro ao criar cargo.");
+        }
+        created.positionIds.push(posRow.id);
+      }
+    }
+
+    await logAction({
+      userId: session.profile.id,
+      action: "department.created",
+      resourceType: "department",
+      resourceId: created.departmentId,
+      metadata: {
+        type: "department_bundle",
+        name,
+        sectors_count: sectorList.length,
+        positions_count: created.positionIds.length,
+      },
+    });
+
+    revalidateOrg();
+    return { success: true as const, id: created.departmentId };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Erro ao criar estrutura.";
+
+    if (created.positionIds.length > 0) {
+      await admin.from("positions").delete().in("id", created.positionIds);
+    }
+    if (created.sectorIds.length > 0) {
+      await admin.from("departments").delete().in("id", created.sectorIds);
+    }
+    if (created.departmentId) {
+      await admin.from("departments").delete().eq("id", created.departmentId);
+    }
+
+    return { error: message };
+  }
 }
 
 export async function updateDepartmentAction(formData: FormData) {
