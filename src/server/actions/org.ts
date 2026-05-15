@@ -162,21 +162,37 @@ export async function getDepartmentDetailAction(
 
   const supabase = await createClient();
 
-  const { data: department, error } = await supabase
+  const { data: row, error } = await supabase
     .from("departments")
-    .select(
-      `
-      id, name, parent_id, responsible_name, responsible_id,
-      parent:departments!departments_parent_id_fkey(name),
-      responsible:profiles!departments_responsible_id_fkey(full_name)
-    `,
-    )
+    .select("id, name, parent_id, responsible_name, responsible_id")
     .eq("id", departmentId)
-    .single();
+    .maybeSingle();
 
-  if (error || !department) {
+  if (error || !row) {
     return { error: "Departamento não encontrado." };
   }
+
+  const department = row;
+
+  const [parentResult, responsibleResult] = await Promise.all([
+    department.parent_id
+      ? supabase
+          .from("departments")
+          .select("name")
+          .eq("id", department.parent_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null as { name: string } | null }),
+    department.responsible_id
+      ? supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", department.responsible_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null as { full_name: string } | null }),
+  ]);
+
+  const parentName = parentResult.data?.name ?? null;
+  const responsibleProfileName = responsibleResult.data?.full_name ?? null;
 
   const isDepartamento = department.parent_id === null;
 
@@ -235,15 +251,6 @@ export async function getDepartmentDetailAction(
     members = memberRows ?? [];
   }
 
-  const parentRaw = department.parent as { name: string } | { name: string }[] | null;
-  const parent = Array.isArray(parentRaw) ? parentRaw[0] : parentRaw;
-
-  const responsibleRaw = department.responsible as
-    | { full_name: string }
-    | { full_name: string }[]
-    | null;
-  const responsible = Array.isArray(responsibleRaw) ? responsibleRaw[0] : responsibleRaw;
-
   const memberRows: DepartmentMemberRow[] =
     members?.map((m) => {
       const posRaw = m.positions as { name: string } | { name: string }[] | null;
@@ -265,10 +272,10 @@ export async function getDepartmentDetailAction(
       id: department.id,
       name: department.name,
       parent_id: department.parent_id,
-      parent_name: parent?.name ?? null,
+      parent_name: parentName,
       responsible_name: department.responsible_name,
       responsible_id: department.responsible_id,
-      responsible_profile_name: responsible?.full_name ?? null,
+      responsible_profile_name: responsibleProfileName,
       positions: positions ?? [],
       members: memberRows,
     },
@@ -487,6 +494,8 @@ export async function createSectorAction(formData: FormData) {
   const parsed = sectorSchema.safeParse({
     name: formData.get("name"),
     parent_id: formData.get("parent_id"),
+    responsible_name: emptyToNull(formData.get("responsible_name")),
+    responsible_id: emptyToNull(formData.get("responsible_id")),
   });
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -498,6 +507,8 @@ export async function createSectorAction(formData: FormData) {
     .insert({
       name: parsed.data.name,
       parent_id: parsed.data.parent_id,
+      responsible_name: parsed.data.responsible_name ?? null,
+      responsible_id: parsed.data.responsible_id ?? null,
     })
     .select("id")
     .single();
@@ -526,16 +537,29 @@ export async function updateSectorAction(formData: FormData) {
     id: formData.get("id"),
     name: formData.get("name"),
     parent_id: formData.get("parent_id") || undefined,
+    responsible_name: emptyToNull(formData.get("responsible_name")),
+    responsible_id: emptyToNull(formData.get("responsible_id")),
   });
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const { id, name, parent_id } = parsed.data;
+  const { id, ...rest } = parsed.data;
+  const patch: {
+    name?: string;
+    parent_id?: string;
+    responsible_name?: string | null;
+    responsible_id?: string | null;
+  } = {};
+  if (rest.name !== undefined) patch.name = rest.name;
+  if (rest.parent_id !== undefined) patch.parent_id = rest.parent_id;
+  if (rest.responsible_name !== undefined) patch.responsible_name = rest.responsible_name;
+  if (rest.responsible_id !== undefined) patch.responsible_id = rest.responsible_id;
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("departments")
-    .update({ name, parent_id })
+    .update(patch)
     .eq("id", id)
     .not("parent_id", "is", null);
 
@@ -546,7 +570,7 @@ export async function updateSectorAction(formData: FormData) {
     action: "department.updated",
     resourceType: "department",
     resourceId: id,
-    metadata: { type: "sector", name, parent_id },
+    metadata: { type: "sector", ...patch },
   });
 
   revalidateOrg();
