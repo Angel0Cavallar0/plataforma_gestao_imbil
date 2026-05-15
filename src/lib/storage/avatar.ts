@@ -38,7 +38,7 @@ export function getAvatarPublicDisplayUrl(
   const path = parseAvatarStoragePath(avatarUrl, userId);
   if (!path) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   if (!baseUrl) return null;
 
   const version =
