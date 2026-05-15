@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma de Gestão Imbil
 
-## Getting Started
+Command Center B2B da Imbil — Fase 1: casca da aplicação (auth, navegação, configurações, usuários e permissões).
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS 4 + componentes UI custom (padrão shadcn)
+- Supabase Auth + PostgreSQL (RLS)
+- Deploy: **Vercel** (configuração manual)
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env.local` em desenvolvimento.
+
+| Variável | Escopo | Vercel |
+|----------|--------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Público | Production + Preview |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Público | Production + Preview |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Somente servidor** | Production + Preview |
+| `NEXT_PUBLIC_APP_URL` | Links de e-mail | Production + Preview |
+
+**Nunca** commite `.env.local` nem exponha a service role no client (`NEXT_PUBLIC_`).
+
+### Checklist Vercel
+
+1. Importar repositório `plataforma_gestao_imbil`
+2. Framework: Next.js
+3. Em **Settings → Environment Variables**, configurar as quatro variáveis acima
+4. Deploy
+
+## Primeiro superadmin
+
+1. Criar usuário em **Supabase Dashboard → Authentication → Users**
+2. Inserir registro em `profiles` com `role_id` do role `superadmin` (consultar tabela `roles`)
+3. Fazer login na aplicação
+
+## Desenvolvimento
 
 ```bash
+npm install
+cp .env.example .env.local
+# preencher variáveis
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` — servidor de desenvolvimento
+- `npm run build` — build de produção
+- `npm run lint` — ESLint
+- `npm run test` — Vitest
+- `npm run test:e2e` — Playwright (smoke)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Migrations Supabase
 
-## Learn More
+Arquivos em `supabase/migrations/`. Aplicadas no projeto Imbil via Supabase MCP.
 
-To learn more about Next.js, take a look at the following resources:
+## Hierarquia de permissões (Fase 1)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Ação | Nível mínimo |
+|------|----------------|
+| Configurações (menu) | supervisão+ (exceto diretoria) |
+| Ver usuários / auditoria | supervisão+ |
+| Desbloquear / solicitar senha | supervisão+ |
+| Criar/editar/desativar usuários | gestor+ |
+| Excluir usuário ou log | superadmin |
