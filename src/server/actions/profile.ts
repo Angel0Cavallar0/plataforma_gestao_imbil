@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/auth/session";
 import { logAction } from "@/lib/auth/audit";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/constants";
+import { getAvatarPublicDisplayUrl, removeStaleAvatarFiles } from "@/lib/storage/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { avatarFileSchema, parseMyProfileFormData } from "@/lib/validations/profile";
 import { z } from "zod";
@@ -96,41 +97,32 @@ export async function uploadAvatarAction(formData: FormData) {
   const path = `${session.profile.id}/avatar.${ext}`;
   const supabase = await createClient();
 
-  const { data: existing } = await supabase.storage
-    .from("avatars")
-    .list(session.profile.id);
+  const fileBytes = new Uint8Array(await parsed.data.arrayBuffer());
 
-  if (existing?.length) {
-    await supabase.storage
-      .from("avatars")
-      .remove(existing.map((obj) => `${session.profile.id}/${obj.name}`));
-  }
-
-  const buffer = Buffer.from(await parsed.data.arrayBuffer());
   const { error: uploadError } = await supabase.storage
     .from("avatars")
-    .upload(path, buffer, {
+    .upload(path, fileBytes, {
       contentType: parsed.data.type,
       upsert: true,
     });
 
   if (uploadError) return { error: uploadError.message };
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("avatars").getPublicUrl(path);
+  await removeStaleAvatarFiles(supabase, session.profile.id, path);
 
-  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+  const updatedAt = new Date().toISOString();
 
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
-      avatar_url: avatarUrl,
-      updated_at: new Date().toISOString(),
+      avatar_url: path,
+      updated_at: updatedAt,
     })
     .eq("id", session.profile.id);
 
   if (profileError) return { error: profileError.message };
+
+  const avatarUrl = getAvatarPublicDisplayUrl(path, session.profile.id, updatedAt);
 
   await logAction({
     userId: session.profile.id,
@@ -141,5 +133,5 @@ export async function uploadAvatarAction(formData: FormData) {
 
   revalidatePath("/perfil");
   revalidatePath("/", "layout");
-  return { success: true as const, avatarUrl };
+  return { success: true as const, avatarUrl: avatarUrl ?? undefined };
 }

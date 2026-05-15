@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { uploadAvatarAction, updateMyProfileAction } from "@/server/actions/profile";
@@ -89,6 +90,7 @@ function buildFormData(form: FormState): FormData {
 }
 
 export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
+  const router = useRouter();
   const { setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(initial);
@@ -129,21 +131,30 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
 
     const formData = new FormData();
     formData.set("avatar", file);
-    const result = await uploadAvatarAction(formData);
-    URL.revokeObjectURL(previewUrl);
-    setUploading(false);
 
-    if (result.error) {
-      setAvatarUrl(savedAvatarUrl);
-      setError(result.error);
-      toast.error(result.error);
-      return;
-    }
+    try {
+      const result = await uploadAvatarAction(formData);
 
-    if (result.avatarUrl) {
+      if (result.error) {
+        setAvatarUrl(savedAvatarUrl);
+        setError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      if (!result.avatarUrl) {
+        setAvatarUrl(savedAvatarUrl);
+        toast.error("Não foi possível gerar o link da foto. Tente novamente.");
+        return;
+      }
+
       setAvatarUrl(result.avatarUrl);
       setSavedAvatarUrl(result.avatarUrl);
+      router.refresh();
       toast.success("Foto atualizada.");
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setUploading(false);
     }
   }
 

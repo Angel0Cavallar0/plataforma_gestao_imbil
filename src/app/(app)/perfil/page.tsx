@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/auth/session";
+import { getAvatarPublicDisplayUrl } from "@/lib/storage/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { parseAddressFromJson } from "@/lib/profile/parse-address";
 import { ProfileReadOnlyCard } from "@/components/profile/profile-read-only-card";
@@ -27,6 +28,7 @@ export default async function PerfilPage() {
       whatsapp,
       birth_date,
       avatar_url,
+      updated_at,
       address,
       theme_preference,
       language,
@@ -60,6 +62,12 @@ export default async function PerfilPage() {
       .maybeSingle();
     managerName = manager?.full_name ?? null;
   }
+
+  const avatarDisplayUrl = getAvatarPublicDisplayUrl(
+    profile.avatar_url,
+    session.profile.id,
+    profile.updated_at,
+  );
 
   return (
     <div className="space-y-6">
@@ -95,7 +103,7 @@ export default async function PerfilPage() {
           phone: profile.phone,
           whatsapp: profile.whatsapp,
           birth_date: profile.birth_date,
-          avatar_url: profile.avatar_url,
+          avatar_url: avatarDisplayUrl,
           address: parseAddressFromJson(profile.address),
           theme_preference: profile.theme_preference ?? "system",
           language: profile.language ?? "pt-BR",
