@@ -10,12 +10,15 @@ export const createUserSchema = z.object({
   position_id: z.string().uuid().optional().nullable(),
   manager_id: z.string().uuid().optional().nullable(),
   admission_date: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  whatsapp: z.string().optional().nullable(),
   status: z.enum(PROFILE_STATUSES).default("ativo"),
   module_ids: z.array(z.string().uuid()).optional(),
 });
 
-export const updateUserSchema = createUserSchema.partial().extend({
+export const updateUserSchema = createUserSchema.partial().omit({ email: true }).extend({
   id: z.string().uuid(),
+  must_change_password: z.boolean().optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

@@ -121,9 +121,21 @@ export async function updateUserAction(formData: FormData) {
   }
 
   const moduleIds = formData.getAll("module_ids") as string[];
+  const raw = Object.fromEntries(formData.entries()) as Record<string, string>;
+  delete raw.module_ids;
+  const emptyToNull = (key: string) =>
+    raw[key] === undefined || raw[key] === "" ? null : raw[key];
+
   const parsed = updateUserSchema.safeParse({
-    ...Object.fromEntries(formData.entries()),
+    ...raw,
+    department_id: emptyToNull("department_id"),
+    position_id: emptyToNull("position_id"),
+    manager_id: emptyToNull("manager_id"),
+    admission_date: raw.admission_date === "" ? null : (raw.admission_date ?? null),
+    phone: raw.phone === "" || raw.phone === undefined ? null : raw.phone,
+    whatsapp: raw.whatsapp === "" || raw.whatsapp === undefined ? null : raw.whatsapp,
     module_ids: moduleIds,
+    must_change_password: formData.get("must_change_password") === "on",
   });
 
   if (!parsed.success) {
@@ -314,11 +326,16 @@ export interface UserDetailData {
   must_change_password: boolean | null;
   password_changed_at: string | null;
   deactivated_at: string | null;
+  role_id: string;
   role_name: string;
   role_slug: string;
+  department_id: string | null;
   department_name: string | null;
+  position_id: string | null;
   position_name: string | null;
+  manager_id: string | null;
   manager_name: string | null;
+  module_ids: string[];
   module_names: string[];
   last_email_status: string | null;
   last_email_at: string | null;
@@ -388,7 +405,7 @@ export async function getUserDetailAction(userId: string) {
   if (moduleIds.length > 0) {
     const { data: mods } = await supabase
       .from("modules")
-      .select("name, display_order")
+      .select("id, name, display_order")
       .in("id", moduleIds)
       .order("display_order");
     moduleNames = mods?.map((m) => m.name) ?? [];
@@ -422,11 +439,16 @@ export async function getUserDetailAction(userId: string) {
     must_change_password: profile.must_change_password,
     password_changed_at: profile.password_changed_at,
     deactivated_at: profile.deactivated_at,
+    role_id: profile.role_id,
     role_name: role?.name ?? "—",
     role_slug: role?.slug ?? "—",
+    department_id: profile.department_id,
     department_name: department?.name ?? null,
+    position_id: profile.position_id,
     position_name: position?.name ?? null,
+    manager_id: profile.manager_id,
     manager_name: manager?.full_name ?? null,
+    module_ids: moduleIds,
     module_names: moduleNames,
     last_email_status: lastEmail?.status ?? null,
     last_email_at: lastEmail?.created_at ?? null,
