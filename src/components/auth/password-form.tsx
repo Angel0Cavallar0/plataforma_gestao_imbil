@@ -1,23 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { setPasswordFromTokenAction } from "@/server/actions/auth";
+import { setPasswordFromSessionAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface PasswordFormProps {
-  token: string;
   type: "cadastrar" | "trocar";
 }
 
-export function PasswordForm({ token, type }: PasswordFormProps) {
+export function PasswordForm({ type }: PasswordFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setError(null);
-    const result = await setPasswordFromTokenAction(token, formData, type);
+    const result = await setPasswordFromSessionAction(formData, type);
     if (!result?.error) return;
     if ("form" in result.error && result.error.form) setError(result.error.form[0]);
     else if ("password" in result.error && result.error.password)
@@ -31,8 +36,8 @@ export function PasswordForm({ token, type }: PasswordFormProps) {
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
-          Mínimo 12 caracteres com maiúsculas, minúsculas, números e especiais. Validade do
-          link: 30 minutos.
+          Mínimo 12 caracteres com maiúsculas, minúsculas, números e especiais. O link do
+          e-mail expira conforme a política configurada no Supabase Auth.
         </CardDescription>
       </CardHeader>
       <CardContent>

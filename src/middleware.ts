@@ -1,20 +1,27 @@
 import { updateSession } from "@/lib/supabase/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 
-const AUTH_ROUTES = ["/login", "/cadastrar-senha", "/trocar-senha"];
-const PUBLIC_PREFIXES = ["/cadastrar-senha/", "/trocar-senha/"];
+const AUTH_ROUTES = [
+  "/login",
+  "/cadastrar-senha",
+  "/trocar-senha",
+  "/auth/callback",
+  "/auth/confirm",
+  "/auth/complete",
+];
+const PUBLIC_PREFIXES = ["/auth/"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { supabaseResponse, user } = await updateSession(request);
 
   const isAuthRoute =
-    AUTH_ROUTES.includes(pathname) ||
-    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+    AUTH_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    // Raiz costuma ser o Site URL do Supabase; /auth/complete preserva o hash no cliente.
+    url.pathname = pathname === "/" ? "/auth/complete" : "/login";
     return NextResponse.redirect(url);
   }
 
