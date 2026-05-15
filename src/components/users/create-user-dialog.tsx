@@ -65,44 +65,38 @@ export function CreateUserDialog({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sectorId, setSectorId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [sectorId, setSectorId] = useState("");
   const [positionId, setPositionId] = useState("");
   const [managerId, setManagerId] = useState("");
 
-  const sectors = useMemo(
+  const topDepartments = useMemo(
     () => departments.filter((d) => d.parent_id === null),
     [departments],
   );
 
-  const sectorDepartments = useMemo(
-    () => departments.filter((d) => d.parent_id === sectorId),
-    [departments, sectorId],
+  const childSectors = useMemo(
+    () => departments.filter((d) => d.parent_id === departmentId),
+    [departments, departmentId],
   );
 
-  const departmentPositions = useMemo(
-    () => positions.filter((p) => p.department_id === departmentId),
-    [positions, departmentId],
+  const sectorPositions = useMemo(
+    () => positions.filter((p) => p.department_id === sectorId),
+    [positions, sectorId],
   );
 
   const selectedDepartment = departments.find((d) => d.id === departmentId);
 
   function resetOrgFields() {
+    setDepartmentId("");
     setSectorId("");
-    setDepartmentId("");
-    setPositionId("");
-    setManagerId("");
-  }
-
-  function handleSectorChange(nextSectorId: string) {
-    setSectorId(nextSectorId);
-    setDepartmentId("");
     setPositionId("");
     setManagerId("");
   }
 
   function handleDepartmentChange(nextDepartmentId: string) {
     setDepartmentId(nextDepartmentId);
+    setSectorId("");
     setPositionId("");
     const dept = departments.find((d) => d.id === nextDepartmentId);
     if (dept?.responsible_id) {
@@ -112,11 +106,17 @@ export function CreateUserDialog({
     }
   }
 
+  function handleSectorChange(nextSectorId: string) {
+    setSectorId(nextSectorId);
+    setPositionId("");
+  }
+
   async function handleSubmit(formData: FormData) {
     setError(null);
     setIsSubmitting(true);
     try {
-      if (departmentId) formData.set("department_id", departmentId);
+      const profileDepartmentId = sectorId || departmentId;
+      if (profileDepartmentId) formData.set("department_id", profileDepartmentId);
       if (positionId) formData.set("position_id", positionId);
       if (managerId) formData.set("manager_id", managerId);
 
@@ -198,35 +198,35 @@ export function CreateUserDialog({
                 </select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="sector_id">Setor</Label>
-                <select
-                  id="sector_id"
-                  value={sectorId}
-                  onChange={(e) => handleSectorChange(e.target.value)}
-                  disabled={isSubmitting || sectors.length === 0}
-                  className={selectClassName}
-                >
-                  <option value="">Selecione...</option>
-                  {sectors.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
                 <Label htmlFor="department_id">Departamento</Label>
                 <select
                   id="department_id"
                   value={departmentId}
                   onChange={(e) => handleDepartmentChange(e.target.value)}
-                  disabled={isSubmitting || !sectorId}
+                  disabled={isSubmitting || topDepartments.length === 0}
                   className={selectClassName}
                 >
                   <option value="">Selecione...</option>
-                  {sectorDepartments.map((d) => (
+                  {topDepartments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sector_id">Setor</Label>
+                <select
+                  id="sector_id"
+                  value={sectorId}
+                  onChange={(e) => handleSectorChange(e.target.value)}
+                  disabled={isSubmitting || !departmentId}
+                  className={selectClassName}
+                >
+                  <option value="">Selecione...</option>
+                  {childSectors.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -237,11 +237,11 @@ export function CreateUserDialog({
                   id="position_id"
                   value={positionId}
                   onChange={(e) => setPositionId(e.target.value)}
-                  disabled={isSubmitting || !departmentId}
+                  disabled={isSubmitting || !sectorId}
                   className={selectClassName}
                 >
                   <option value="">Selecione...</option>
-                  {departmentPositions.map((p) => (
+                  {sectorPositions.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
