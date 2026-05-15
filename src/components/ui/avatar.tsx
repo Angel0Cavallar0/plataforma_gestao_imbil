@@ -4,6 +4,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type AvatarContextValue = {
+  hasSrc: boolean;
+  setHasSrc: (has: boolean) => void;
   imageLoaded: boolean;
   setImageLoaded: (loaded: boolean) => void;
 };
@@ -18,12 +20,17 @@ function useAvatarContext() {
   return ctx;
 }
 
+function isImageReady(img: HTMLImageElement | null): boolean {
+  return Boolean(img?.complete && img.naturalWidth > 0);
+}
+
 const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
+    const [hasSrc, setHasSrc] = React.useState(false);
     const [imageLoaded, setImageLoaded] = React.useState(false);
 
     return (
-      <AvatarContext.Provider value={{ imageLoaded, setImageLoaded }}>
+      <AvatarContext.Provider value={{ hasSrc, setHasSrc, imageLoaded, setImageLoaded }}>
         <div
           ref={ref}
           className={cn(
@@ -44,17 +51,35 @@ const AvatarImage = React.forwardRef<
   HTMLImageElement,
   React.ImgHTMLAttributes<HTMLImageElement>
 >(({ className, src, alt = "", onLoad, onError, ...props }, ref) => {
-  const { setImageLoaded } = useAvatarContext();
+  const { setHasSrc, setImageLoaded } = useAvatarContext();
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
 
-  React.useEffect(() => {
+  const markLoadedIfReady = React.useCallback(() => {
+    if (isImageReady(imgRef.current)) {
+      setImageLoaded(true);
+    }
+  }, [setImageLoaded]);
+
+  React.useLayoutEffect(() => {
+    const active = Boolean(src);
+    setHasSrc(active);
     setImageLoaded(false);
-  }, [src, setImageLoaded]);
+    if (!active) return;
+    markLoadedIfReady();
+  }, [src, setHasSrc, setImageLoaded, markLoadedIfReady]);
 
   if (!src) return null;
 
   return (
     <img
-      ref={ref}
+      ref={(node) => {
+        imgRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+        if (isImageReady(node)) {
+          setImageLoaded(true);
+        }
+      }}
       src={src}
       alt={alt}
       onLoad={(e) => {
@@ -65,7 +90,7 @@ const AvatarImage = React.forwardRef<
         setImageLoaded(false);
         onError?.(e);
       }}
-      className={cn("absolute inset-0 h-full w-full object-cover", className)}
+      className={cn("absolute inset-0 z-10 h-full w-full object-cover", className)}
       {...props}
     />
   );
@@ -75,20 +100,24 @@ AvatarImage.displayName = "AvatarImage";
 const AvatarFallback = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
-  const { imageLoaded } = useAvatarContext();
+>(({ className, children, ...props }, ref) => {
+  const { hasSrc, imageLoaded } = useAvatarContext();
+
+  if (hasSrc && imageLoaded) {
+    return null;
+  }
 
   return (
     <div
       ref={ref}
       className={cn(
-        "absolute inset-0 flex h-full w-full items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground",
-        imageLoaded && "pointer-events-none opacity-0",
+        "absolute inset-0 z-0 flex h-full w-full items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground",
         className,
       )}
-      aria-hidden={imageLoaded}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 });
 AvatarFallback.displayName = "AvatarFallback";
