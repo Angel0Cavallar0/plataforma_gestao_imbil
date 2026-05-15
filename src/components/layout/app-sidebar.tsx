@@ -3,20 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  LayoutDashboard,
-  Settings,
-  ChevronDown,
-  LogOut,
-  Moon,
-  Sun,
-} from "lucide-react";
-import { useTheme } from "next-themes";
+import { Home, LayoutDashboard, Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { SidebarUserFooter } from "@/components/layout/sidebar-user-footer";
 import type { NavPermissions, UserProfile } from "@/types/auth";
-import { logoutAction } from "@/server/actions/auth";
 
 interface AppSidebarProps {
   profile: UserProfile;
@@ -25,7 +15,6 @@ interface AppSidebarProps {
 
 export function AppSidebar({ profile, nav }: AppSidebarProps) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
 
   const linkClass = (href: string) =>
     cn(
@@ -36,18 +25,27 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
     );
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center border-b border-sidebar-border px-4">
-        <Image src="/imbil-logo.svg" alt="Imbil" width={120} height={32} className="h-8 w-auto" />
+    <aside className="flex h-screen w-64 flex-col overflow-visible border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border px-4">
+        <Link href="/" className="flex items-center justify-center">
+          <Image
+            src="/imbil-logo.svg"
+            alt="Imbil"
+            width={130}
+            height={40}
+            className="h-9 w-auto"
+            priority
+          />
+        </Link>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <Link href="/" className={linkClass("/")}>
-          <Home className="h-4 w-4" />
+          <Home className="h-4 w-4 shrink-0" />
           Home
         </Link>
         <Link href="/dashboards" className={linkClass("/dashboards")}>
-          <LayoutDashboard className="h-4 w-4" />
+          <LayoutDashboard className="h-4 w-4 shrink-0" />
           Dashboards
         </Link>
 
@@ -64,7 +62,7 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
                 )}
               >
                 <span className="flex-1">{mod.name}</span>
-                <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+                <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
               </summary>
               <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-2">
                 <Link
@@ -83,37 +81,14 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
 
         {nav.canAccessConfig && (
           <Link href="/configuracoes/usuarios" className={linkClass("/configuracoes")}>
-            <Settings className="h-4 w-4" />
+            <Settings className="h-4 w-4 shrink-0" />
             Configurações
           </Link>
         )}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3 space-y-2">
-        <div className="px-2 text-sm">
-          <p className="font-medium truncate">{profile.full_name}</p>
-          <p className="text-xs text-sidebar-foreground/60 truncate">{profile.role_name}</p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-sidebar-foreground"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          Alternar tema
-        </Button>
-        <form action={logoutAction}>
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-sidebar-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair
-          </Button>
-        </form>
+      <div className="shrink-0 overflow-visible border-t border-sidebar-border">
+        <SidebarUserFooter profile={profile} />
       </div>
     </aside>
   );

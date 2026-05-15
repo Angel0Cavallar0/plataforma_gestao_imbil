@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { loginAction } from "@/server/actions/auth";
-import { Button } from "@/components/ui/button";
+import { LoginSubmitButton } from "@/components/auth/login-submit-button";
+import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,23 +12,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showForgot, setShowForgot] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     setError(null);
-    const result = await loginAction(formData);
-    if (result?.error && "form" in result.error && result.error.form) {
-      setError(result.error.form[0]);
+    setIsSubmitting(true);
+    try {
+      const result = await loginAction(formData);
+      if (result?.error && "form" in result.error && result.error.form) {
+        setError(result.error.form[0]);
+        setIsSubmitting(false);
+      }
+    } catch {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="relative w-full max-w-md overflow-hidden">
+      {isSubmitting && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <LoadingScreen message="Autenticando..." compact />
+        </div>
+      )}
       <CardHeader className="text-center">
         <Image
           src="/imbil-logo.svg"
           alt="Imbil"
-          width={160}
-          height={48}
+          width={180}
+          height={54}
+          priority
           className="mx-auto mb-4 h-12 w-auto"
         />
         <CardTitle>Acessar plataforma</CardTitle>
@@ -37,7 +51,14 @@ export function LoginForm() {
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              disabled={isSubmitting}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
@@ -47,17 +68,17 @@ export function LoginForm() {
               type="password"
               required
               autoComplete="current-password"
+              disabled={isSubmitting}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full">
-            Entrar
-          </Button>
+          <LoginSubmitButton />
         </form>
         <button
           type="button"
-          className="mt-4 w-full text-center text-sm text-primary hover:underline"
+          className="mt-4 w-full text-center text-sm text-primary hover:underline disabled:opacity-50"
           onClick={() => setShowForgot(!showForgot)}
+          disabled={isSubmitting}
         >
           Esqueci minha senha
         </button>
