@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getNavPermissions, requireAuth } from "@/lib/auth/session";
+import { isSuperadmin } from "@/lib/auth/permissions";
 import { UsersTable, type UserRow } from "@/components/users/users-table";
 import { CreateUserDialog } from "@/components/users/create-user-dialog";
 
@@ -74,6 +75,7 @@ export default async function UsuariosPage() {
           departments={departments ?? []}
           positions={positions ?? []}
           managers={managers ?? []}
+          isActingSuperadmin={isSuperadmin(session.profile)}
         />
       )}
       <UsersTable
