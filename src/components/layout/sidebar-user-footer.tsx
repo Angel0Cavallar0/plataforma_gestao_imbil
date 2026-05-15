@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react";
+import Link from "next/link";
+import { ChevronsUpDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,10 +29,7 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
@@ -74,6 +72,15 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
           role="menu"
           className="absolute bottom-2 left-full z-50 ml-2 min-w-[12rem] overflow-hidden rounded-lg border border-sidebar-border bg-popover p-1 text-popover-foreground shadow-lg"
         >
+          <Link
+            href="/perfil"
+            role="menuitem"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+            onClick={() => setOpen(false)}
+          >
+            <User className="h-4 w-4" />
+            Meu perfil
+          </Link>
           <button
             type="button"
             role="menuitem"

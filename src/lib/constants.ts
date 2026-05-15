@@ -41,6 +41,15 @@ export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
 export const PROFILE_STATUSES = ["ativo", "inativo", "bloqueado"] as const;
 
+export const THEME_PREFERENCES = ["light", "dark", "system"] as const;
+export type ThemePreference = (typeof THEME_PREFERENCES)[number];
+
+export const LANGUAGES = ["pt-BR"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+export const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
 export const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 export const PASSWORD_TOKEN_TTL_MINUTES = 30;
 export const PASSWORD_CHANGE_INTERVAL_DAYS = 90;
