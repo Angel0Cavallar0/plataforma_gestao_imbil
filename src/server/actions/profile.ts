@@ -2,8 +2,10 @@
 
 import { requireAuth } from "@/lib/auth/session";
 import { logAction } from "@/lib/auth/audit";
+import { THEME_PREFERENCES, type ThemePreference } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import { avatarFileSchema, parseMyProfileFormData } from "@/lib/validations/profile";
+import { z } from "zod";
 import type { Json } from "@/types/database";
 import { revalidatePath } from "next/cache";
 
@@ -12,6 +14,29 @@ const AVATAR_EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 };
+
+const themePreferenceSchema = z.enum(THEME_PREFERENCES);
+
+export async function updateThemePreferenceAction(theme: ThemePreference) {
+  const session = await requireAuth();
+  const parsed = themePreferenceSchema.safeParse(theme);
+  if (!parsed.success) return { error: "Tema inválido." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      theme_preference: parsed.data,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", session.profile.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/perfil");
+  revalidatePath("/", "layout");
+  return { success: true as const };
+}
 
 export async function updateMyProfileAction(formData: FormData) {
   const session = await requireAuth();
