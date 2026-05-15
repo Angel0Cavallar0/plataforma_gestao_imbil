@@ -1,9 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  canAccessConfig,
-  canManageUsers,
-  isSuperadmin,
-} from "@/lib/auth/permissions";
+import { getAvatarPublicDisplayUrl } from "@/lib/storage/avatar";
+import { canAccessConfig, canManageUsers, isSuperadmin } from "@/lib/auth/permissions";
 import type { NavPermissions, SessionContext, UserProfile } from "@/types/auth";
 import { redirect } from "next/navigation";
 
@@ -30,6 +27,12 @@ export async function getSession(): Promise<SessionContext | null> {
   const role = Array.isArray(roleData) ? roleData[0] : roleData;
   if (!role) return null;
 
+  const avatarDisplayUrl = getAvatarPublicDisplayUrl(
+    profile.avatar_url,
+    profile.id,
+    profile.updated_at,
+  );
+
   const userProfile: UserProfile = {
     id: profile.id,
     full_name: profile.full_name,
@@ -40,7 +43,7 @@ export async function getSession(): Promise<SessionContext | null> {
     hierarchy_level: role.hierarchy_level,
     status: profile.status,
     theme_preference: profile.theme_preference ?? "system",
-    avatar_url: profile.avatar_url,
+    avatar_url: avatarDisplayUrl,
     must_change_password: profile.must_change_password ?? false,
   };
 
@@ -63,9 +66,7 @@ export async function requireMinRole(
   }
 }
 
-export async function getNavPermissions(
-  profile: UserProfile,
-): Promise<NavPermissions> {
+export async function getNavPermissions(profile: UserProfile): Promise<NavPermissions> {
   const supabase = await createClient();
   const { data: modules } = await supabase
     .from("modules")
@@ -81,14 +82,16 @@ export async function getNavPermissions(
       .eq("user_id", profile.id);
 
     accessibleModules =
-      access?.map((a) => {
-        const raw = a.modules as
-          | { slug: string; name: string }
-          | { slug: string; name: string }[]
-          | null;
-        const m = Array.isArray(raw) ? raw[0] : raw;
-        return { slug: m?.slug ?? "", name: m?.name ?? "" };
-      }).filter((m) => m.slug) ?? [];
+      access
+        ?.map((a) => {
+          const raw = a.modules as
+            | { slug: string; name: string }
+            | { slug: string; name: string }[]
+            | null;
+          const m = Array.isArray(raw) ? raw[0] : raw;
+          return { slug: m?.slug ?? "", name: m?.name ?? "" };
+        })
+        .filter((m) => m.slug) ?? [];
   }
 
   return {

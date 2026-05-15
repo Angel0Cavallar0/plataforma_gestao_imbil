@@ -1,46 +1,92 @@
+﻿"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Avatar = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full",
-      className,
-    )}
-    {...props}
-  />
-));
-Avatar.displayName = "Avatar";
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
-const AvatarImage = React.forwardRef<
-  HTMLImageElement,
-  React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, ...props }, ref) => (
-  <img
-    ref={ref}
-    className={cn("aspect-square h-full w-full object-cover", className)}
-    {...props}
-  />
-));
-AvatarImage.displayName = "AvatarImage";
+function ProfileAvatarInner({
+  src,
+  name,
+  className,
+  fallbackClassName,
+}: {
+  src: string;
+  name: string;
+  className?: string;
+  fallbackClassName?: string;
+}) {
+  const [loaded, setLoaded] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
 
-const AvatarFallback = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground",
-      className,
-    )}
-    {...props}
-  />
-));
-AvatarFallback.displayName = "AvatarFallback";
+  const showImage = !failed;
 
-export { Avatar, AvatarImage, AvatarFallback };
+  return (
+    <div className={cn("relative shrink-0 overflow-hidden rounded-full", className)}>
+      <div
+        className={cn(
+          "absolute inset-0 flex items-center justify-center rounded-full bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+          fallbackClassName,
+          showImage && loaded && "opacity-0",
+        )}
+        aria-hidden={showImage && loaded}
+      >
+        {getInitials(name)}
+      </div>
+      {showImage && (
+        // eslint-disable-next-line @next/next/no-img-element -- URL dinâmica do Supabase Storage
+        <img
+          src={src}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+export function ProfileAvatar({
+  src,
+  name,
+  className,
+  fallbackClassName,
+}: {
+  src?: string | null;
+  name: string;
+  className?: string;
+  fallbackClassName?: string;
+}) {
+  if (!src) {
+    return (
+      <div className={cn("relative shrink-0 overflow-hidden rounded-full", className)}>
+        <div
+          className={cn(
+            "absolute inset-0 flex items-center justify-center rounded-full bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+            fallbackClassName,
+          )}
+        >
+          {getInitials(name)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ProfileAvatarInner
+      key={src}
+      src={src}
+      name={name}
+      className={className}
+      fallbackClassName={fallbackClassName}
+    />
+  );
+}

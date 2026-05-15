@@ -25,7 +25,7 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
     );
 
   return (
-    <aside className="flex h-screen w-64 flex-col overflow-visible border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-visible border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border px-4">
         <Link href="/" className="flex items-center justify-center">
           <Image
