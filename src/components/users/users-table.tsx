@@ -7,7 +7,10 @@ import {
   deactivateUserAction,
 } from "@/server/actions/users";
 import { Button } from "@/components/ui/button";
-import { UserDetailDialog } from "@/components/users/user-detail-dialog";
+import {
+  UserDetailDialog,
+  type UserDetailCatalog,
+} from "@/components/users/user-detail-dialog";
 import type { NavPermissions } from "@/types/auth";
 
 export interface UserRow {
@@ -23,9 +26,10 @@ export interface UserRow {
 interface UsersTableProps {
   users: UserRow[];
   nav: NavPermissions;
+  userDetailCatalog: UserDetailCatalog;
 }
 
-export function UsersTable({ users, nav }: UsersTableProps) {
+export function UsersTable({ users, nav, userDetailCatalog }: UsersTableProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -116,7 +120,12 @@ export function UsersTable({ users, nav }: UsersTableProps) {
         </table>
       </div>
 
-      <UserDetailDialog userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+      <UserDetailDialog
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+        canEdit={nav.canManageUsers}
+        catalog={userDetailCatalog}
+      />
     </>
   );
 }

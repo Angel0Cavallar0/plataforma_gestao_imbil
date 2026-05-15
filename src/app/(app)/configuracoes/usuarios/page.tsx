@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getNavPermissions, requireAuth } from "@/lib/auth/session";
+import { isSuperadmin } from "@/lib/auth/permissions";
 import { UsersTable, type UserRow } from "@/components/users/users-table";
 import { CreateUserDialog } from "@/components/users/create-user-dialog";
 
@@ -49,12 +50,45 @@ export default async function UsuariosPage() {
     .select("id, name")
     .order("display_order");
 
+  const { data: departments } = await supabase
+    .from("departments")
+    .select("id, name, parent_id, responsible_id")
+    .order("name");
+
+  const { data: positions } = await supabase
+    .from("positions")
+    .select("id, name, department_id")
+    .order("name");
+
+  const { data: managers } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("status", "ativo")
+    .order("full_name");
+
   return (
     <div className="space-y-6">
       {nav.canManageUsers && (
-        <CreateUserDialog roles={roles ?? []} modules={modules ?? []} />
+        <CreateUserDialog
+          roles={roles ?? []}
+          modules={modules ?? []}
+          departments={departments ?? []}
+          positions={positions ?? []}
+          managers={managers ?? []}
+          isActingSuperadmin={isSuperadmin(session.profile)}
+        />
       )}
-      <UsersTable users={users} nav={nav} />
+      <UsersTable
+        users={users}
+        nav={nav}
+        userDetailCatalog={{
+          roles: roles ?? [],
+          modules: modules ?? [],
+          departments: departments ?? [],
+          positions: positions ?? [],
+          managers: managers ?? [],
+        }}
+      />
     </div>
   );
 }
