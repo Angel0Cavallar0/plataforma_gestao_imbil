@@ -76,7 +76,17 @@ export default async function UsuariosPage() {
           managers={managers ?? []}
         />
       )}
-      <UsersTable users={users} nav={nav} />
+      <UsersTable
+        users={users}
+        nav={nav}
+        userDetailCatalog={{
+          roles: roles ?? [],
+          modules: modules ?? [],
+          departments: departments ?? [],
+          positions: positions ?? [],
+          managers: managers ?? [],
+        }}
+      />
     </div>
   );
 }
