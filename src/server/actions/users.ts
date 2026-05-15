@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth/supabase-email";
 import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
 import { revalidatePath } from "next/cache";
+import type { RoleSlug } from "@/lib/constants";
 
 export async function createUserAction(formData: FormData) {
   const session = await requireAuth();
@@ -24,8 +25,9 @@ export async function createUserAction(formData: FormData) {
     return { error: "Sem permissão para criar usuários." };
   }
 
-  const raw = Object.fromEntries(formData.entries());
   const moduleIds = formData.getAll("module_ids") as string[];
+  const raw = Object.fromEntries(formData.entries()) as Record<string, string>;
+  delete raw.module_ids;
 
   const parsed = createUserSchema.safeParse({
     ...raw,
@@ -37,6 +39,41 @@ export async function createUserAction(formData: FormData) {
   }
 
   const admin = createAdminClient();
+
+  const { data: roleRow, error: roleError } = await admin
+    .from("roles")
+    .select("slug")
+    .eq("id", parsed.data.role_id)
+    .maybeSingle();
+
+  if (roleError || !roleRow?.slug) {
+    return { error: "Perfil inválido." };
+  }
+
+  const slug = roleRow.slug as RoleSlug;
+
+  if ((slug === "superadmin" || slug === "diretoria") && !isSuperadmin(session.profile)) {
+    return { error: "Sem permissão para atribuir este perfil." };
+  }
+
+  let department_id = parsed.data.department_id ?? null;
+  let position_id = parsed.data.position_id ?? null;
+  let manager_id = parsed.data.manager_id ?? null;
+  let admission_date = parsed.data.admission_date ?? null;
+  let moduleIdsToGrant = moduleIds;
+
+  if (slug === "superadmin" || slug === "diretoria") {
+    department_id = null;
+    position_id = null;
+    manager_id = null;
+    admission_date = null;
+    moduleIdsToGrant = [];
+  } else if (slug === "gestor") {
+    position_id = null;
+    manager_id = null;
+    moduleIdsToGrant = [];
+  }
+
   const email = parsed.data.email.toLowerCase();
 
   const inviteResult = await sendInviteUserEmail(admin, email, {
@@ -64,10 +101,10 @@ export async function createUserAction(formData: FormData) {
     email,
     registration_number: parsed.data.registration_number,
     role_id: parsed.data.role_id,
-    department_id: parsed.data.department_id ?? null,
-    position_id: parsed.data.position_id ?? null,
-    manager_id: parsed.data.manager_id ?? null,
-    admission_date: parsed.data.admission_date ?? null,
+    department_id,
+    position_id,
+    manager_id,
+    admission_date,
     status: parsed.data.status,
     created_by: session.profile.id,
     must_change_password: true,
@@ -85,9 +122,9 @@ export async function createUserAction(formData: FormData) {
     return { error: profileError.message };
   }
 
-  if (moduleIds.length) {
+  if (moduleIdsToGrant.length > 0) {
     await admin.from("user_module_access").insert(
-      moduleIds.map((module_id) => ({
+      moduleIdsToGrant.map((module_id) => ({
         user_id: invitedUserId,
         module_id,
         granted_by: session.profile.id,
