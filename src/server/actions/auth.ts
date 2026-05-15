@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAction } from "@/lib/auth/audit";
 import { loginSchema, passwordSchema } from "@/lib/validations/auth";
-import { hashToken } from "@/lib/auth/password";
 import {
   LOCKOUT_DURATION_MINUTES,
   MAX_LOCKOUT_CYCLES,
@@ -63,9 +62,7 @@ export async function loginAction(formData: FormData) {
     if (profile.status === "bloqueado") {
       return {
         error: {
-          form: [
-            "Conta travada. Solicite desbloqueio a um supervisor ou gestor.",
-          ],
+          form: ["Conta travada. Solicite desbloqueio a um supervisor ou gestor."],
         },
       };
     }
@@ -113,10 +110,7 @@ export async function loginAction(formData: FormData) {
       });
 
       if (lockoutCount >= MAX_LOCKOUT_CYCLES) {
-        await admin
-          .from("profiles")
-          .update({ status: "bloqueado" })
-          .eq("id", profile.id);
+        await admin.from("profiles").update({ status: "bloqueado" }).eq("id", profile.id);
       }
     }
 
@@ -178,8 +172,7 @@ export async function logoutAction() {
   redirect("/login");
 }
 
-export async function setPasswordFromTokenAction(
-  token: string,
+export async function setPasswordFromSessionAction(
   formData: FormData,
   type: "cadastrar" | "trocar",
 ) {
@@ -192,65 +185,45 @@ export async function setPasswordFromTokenAction(
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const admin = createAdminClient();
-  const tokenHash = hashToken(token);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: tokenRow } = await admin
-    .from("password_reset_tokens")
-    .select("id, user_id")
-    .eq("token_hash", tokenHash)
-    .is("used_at", null)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-
-  if (!tokenRow) {
+  if (!user) {
     return {
       error: {
         form: [
-          "Link expirado ou inválido. Solicite um novo link ao seu supervisor.",
+          "Sessão expirada. Abra novamente o link recebido por e-mail ou solicite um novo envio.",
         ],
       },
     };
   }
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id, email")
-    .eq("id", tokenRow.user_id)
-    .single();
-
-  if (!profile) {
-    return { error: { form: ["Usuário não encontrado."] } };
-  }
-
-  const { error: updateError } = await admin.auth.admin.updateUserById(
-    profile.id,
-    { password: parsed.data.password },
-  );
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
 
   if (updateError) {
     return { error: { form: [updateError.message] } };
   }
 
-  await admin
-    .from("password_reset_tokens")
-    .update({ used_at: new Date().toISOString() })
-    .eq("id", tokenRow.id);
-
+  const admin = createAdminClient();
   await admin
     .from("profiles")
     .update({
       password_changed_at: new Date().toISOString(),
       must_change_password: false,
     })
-    .eq("id", profile.id);
+    .eq("id", user.id);
 
   await logAction({
-    userId: profile.id,
+    userId: user.id,
     action: type === "cadastrar" ? "auth.password.setup" : "auth.password.reset",
     resourceType: "profile",
-    resourceId: profile.id,
+    resourceId: user.id,
   });
 
+  await supabase.auth.signOut();
   redirect("/login?success=password-set");
 }

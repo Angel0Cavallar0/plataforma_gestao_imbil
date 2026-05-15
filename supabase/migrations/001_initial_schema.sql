@@ -45,7 +45,7 @@ CREATE TABLE profiles (
   role_id uuid NOT NULL REFERENCES roles(id),
   department_id uuid REFERENCES departments(id),
   position_id uuid REFERENCES positions(id),
-  manager_id uuid REFERENCES profiles(id),
+  manager_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   admission_date date,
   status text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo','inativo','bloqueado')),
   theme_preference text DEFAULT 'system' CHECK (theme_preference IN ('light','dark','system')),
@@ -55,9 +55,9 @@ CREATE TABLE profiles (
   must_change_password boolean DEFAULT true,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES profiles(id),
+  created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   deactivated_at timestamptz,
-  deactivated_by uuid REFERENCES profiles(id)
+  deactivated_by uuid REFERENCES profiles(id) ON DELETE SET NULL
 );
 
 CREATE TABLE permissions (
@@ -76,7 +76,7 @@ CREATE TABLE role_permissions (
 CREATE TABLE user_module_access (
   user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
   module_id uuid REFERENCES modules(id) ON DELETE CASCADE,
-  granted_by uuid REFERENCES profiles(id),
+  granted_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now(),
   PRIMARY KEY (user_id, module_id)
 );
@@ -85,14 +85,14 @@ CREATE TABLE user_permissions (
   user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
   permission_id uuid REFERENCES permissions(id) ON DELETE CASCADE,
   granted boolean NOT NULL DEFAULT true,
-  granted_by uuid REFERENCES profiles(id),
+  granted_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now(),
   PRIMARY KEY (user_id, permission_id)
 );
 
 CREATE TABLE audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES profiles(id),
+  user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   action text NOT NULL,
   resource_type text NOT NULL,
   resource_id text,
@@ -126,7 +126,7 @@ CREATE TABLE password_reset_tokens (
   token_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   used_at timestamptz,
-  requested_by uuid REFERENCES profiles(id),
+  requested_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now()
 );
 
@@ -137,7 +137,7 @@ CREATE TABLE email_logs (
   type text NOT NULL,
   status text NOT NULL,
   error_message text,
-  related_user_id uuid REFERENCES profiles(id),
+  related_user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   sent_at timestamptz,
   created_at timestamptz DEFAULT now()
 );

@@ -8,13 +8,12 @@ import {
 } from "@/lib/auth/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAction } from "@/lib/auth/audit";
-import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
 import {
-  buildPasswordLink,
-  generateToken,
-  getTokenExpiry,
-  hashToken,
-} from "@/lib/auth/password";
+  logAuthEmail,
+  sendInviteUserEmail,
+  sendRecoveryEmail,
+} from "@/lib/auth/supabase-email";
+import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
 import { revalidatePath } from "next/cache";
 
 export async function createUserAction(formData: FormData) {
@@ -36,22 +35,31 @@ export async function createUserAction(formData: FormData) {
   }
 
   const admin = createAdminClient();
-  const tempPassword = generateToken();
+  const email = parsed.data.email.toLowerCase();
 
-  const { data: authUser, error: authError } = await admin.auth.admin.createUser({
-    email: parsed.data.email.toLowerCase(),
-    password: tempPassword,
-    email_confirm: true,
+  const inviteResult = await sendInviteUserEmail(admin, email, {
+    full_name: parsed.data.full_name,
   });
 
-  if (authError || !authUser.user) {
-    return { error: authError?.message ?? "Erro ao criar usuário no Auth." };
+  if (!inviteResult.ok || !inviteResult.userId) {
+    const message = inviteResult.ok
+      ? "Erro ao obter usuário após convite."
+      : inviteResult.error;
+    await logAuthEmail(admin, {
+      recipient: email,
+      type: "password_setup",
+      status: "failed",
+      errorMessage: message,
+    });
+    return { error: message };
   }
 
+  const invitedUserId = inviteResult.userId;
+
   const { error: profileError } = await admin.from("profiles").insert({
-    id: authUser.user.id,
+    id: invitedUserId,
     full_name: parsed.data.full_name,
-    email: parsed.data.email.toLowerCase(),
+    email,
     registration_number: parsed.data.registration_number,
     role_id: parsed.data.role_id,
     department_id: parsed.data.department_id ?? null,
@@ -64,28 +72,40 @@ export async function createUserAction(formData: FormData) {
   });
 
   if (profileError) {
-    await admin.auth.admin.deleteUser(authUser.user.id);
+    await admin.auth.admin.deleteUser(invitedUserId);
+    await logAuthEmail(admin, {
+      recipient: email,
+      type: "password_setup",
+      status: "failed",
+      relatedUserId: invitedUserId,
+      errorMessage: profileError.message,
+    });
     return { error: profileError.message };
   }
 
   if (moduleIds.length) {
     await admin.from("user_module_access").insert(
       moduleIds.map((module_id) => ({
-        user_id: authUser.user!.id,
+        user_id: invitedUserId,
         module_id,
         granted_by: session.profile.id,
       })),
     );
   }
 
-  await sendPasswordSetupEmail(authUser.user.id, parsed.data.email, session.profile.id);
+  await logAuthEmail(admin, {
+    recipient: email,
+    type: "password_setup",
+    status: "sent",
+    relatedUserId: invitedUserId,
+  });
 
   await logAction({
     userId: session.profile.id,
     action: "user.created",
     resourceType: "profile",
-    resourceId: authUser.user.id,
-    metadata: { email: parsed.data.email },
+    resourceId: invitedUserId,
+    metadata: { email, email_sent: true, auth_email: "invite" },
   });
 
   revalidatePath("/configuracoes/usuarios");
@@ -195,7 +215,10 @@ export async function unlockUserAction(userId: string) {
   return { success: true };
 }
 
-export async function requestPasswordResetAction(userId: string, type: "setup" | "reset") {
+export async function requestPasswordResetAction(
+  userId: string,
+  type: "setup" | "reset",
+) {
   const session = await requireAuth();
   if (!canUnlockOrResetPassword(session.profile)) {
     return { error: "Sem permissão." };
@@ -210,16 +233,37 @@ export async function requestPasswordResetAction(userId: string, type: "setup" |
 
   if (!profile) return { error: "Usuário não encontrado." };
 
-  await sendPasswordSetupEmail(userId, profile.email, session.profile.id, type);
+  const emailResult =
+    type === "setup"
+      ? await sendInviteUserEmail(admin, profile.email)
+      : await sendRecoveryEmail(admin, profile.email);
+
+  await logAuthEmail(admin, {
+    recipient: profile.email,
+    type: type === "setup" ? "password_setup" : "password_reset",
+    status: emailResult.ok ? "sent" : "failed",
+    relatedUserId: userId,
+    errorMessage: emailResult.ok ? undefined : emailResult.error,
+  });
 
   await logAction({
     userId: session.profile.id,
-    action: type === "setup" ? "auth.password.setup.requested" : "auth.password.reset.requested",
+    action:
+      type === "setup"
+        ? "auth.password.setup.requested"
+        : "auth.password.reset.requested",
     resourceType: "profile",
     resourceId: userId,
+    metadata: {
+      email_sent: emailResult.ok,
+      auth_email: type === "setup" ? "invite" : "recovery",
+    },
   });
 
   revalidatePath("/configuracoes/usuarios");
+  if (!emailResult.ok) {
+    return { error: emailResult.error };
+  }
   return { success: true };
 }
 
@@ -251,46 +295,4 @@ export async function deleteUserAction(userId: string, confirmEmail: string) {
 
   revalidatePath("/configuracoes/usuarios");
   return { success: true };
-}
-
-async function sendPasswordSetupEmail(
-  userId: string,
-  email: string,
-  requestedBy: string,
-  type: "setup" | "reset" = "setup",
-) {
-  const admin = createAdminClient();
-  const token = generateToken();
-  const tokenHash = hashToken(token);
-
-  await admin.from("password_reset_tokens").insert({
-    user_id: userId,
-    token_hash: tokenHash,
-    expires_at: getTokenExpiry().toISOString(),
-    requested_by: requestedBy,
-  });
-
-  const link = buildPasswordLink(token, type === "setup" ? "cadastrar" : "trocar");
-  const emailType = type === "setup" ? "password_setup" : "password_reset";
-
-  try {
-    // Supabase Auth invite/reset can be wired when SMTP is configured
-    await admin.from("email_logs").insert({
-      recipient: email,
-      subject: type === "setup" ? "Cadastro de senha" : "Troca de senha",
-      type: emailType,
-      status: "sent",
-      related_user_id: userId,
-      sent_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    await admin.from("email_logs").insert({
-      recipient: email,
-      subject: type === "setup" ? "Cadastro de senha" : "Troca de senha",
-      type: emailType,
-      status: "failed",
-      error_message: err instanceof Error ? err.message : "unknown",
-      related_user_id: userId,
-    });
-  }
 }
