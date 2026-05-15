@@ -344,22 +344,54 @@ export async function getUserDetailAction(userId: string) {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      `
-      id, full_name, email, registration_number, phone, whatsapp,
+      `id, full_name, email, registration_number, phone, whatsapp,
       status, last_login_at, created_at, updated_at, admission_date,
       must_change_password, password_changed_at, deactivated_at,
-      roles(name, slug),
-      departments(name),
-      positions(name),
-      manager:profiles!profiles_manager_id_fkey(full_name),
-      user_module_access(modules(name))
-    `,
+      role_id, department_id, position_id, manager_id`,
     )
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error || !profile) {
     return { error: "Usuário não encontrado." };
+  }
+
+  const [roleResult, departmentResult, positionResult, managerResult, accessResult] =
+    await Promise.all([
+      supabase.from("roles").select("name, slug").eq("id", profile.role_id).maybeSingle(),
+      profile.department_id
+        ? supabase
+            .from("departments")
+            .select("name")
+            .eq("id", profile.department_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { name: string } | null }),
+      profile.position_id
+        ? supabase
+            .from("positions")
+            .select("name")
+            .eq("id", profile.position_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { name: string } | null }),
+      profile.manager_id
+        ? supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", profile.manager_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { full_name: string } | null }),
+      supabase.from("user_module_access").select("module_id").eq("user_id", userId),
+    ]);
+
+  const moduleIds = accessResult.data?.map((row) => row.module_id) ?? [];
+  let moduleNames: string[] = [];
+  if (moduleIds.length > 0) {
+    const { data: mods } = await supabase
+      .from("modules")
+      .select("name, display_order")
+      .in("id", moduleIds)
+      .order("display_order");
+    moduleNames = mods?.map((m) => m.name) ?? [];
   }
 
   const { data: emailLogs } = await supabase
@@ -369,39 +401,10 @@ export async function getUserDetailAction(userId: string) {
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const roleRaw = profile.roles as
-    | { name: string; slug: string }
-    | { name: string; slug: string }[]
-    | null;
-  const role = Array.isArray(roleRaw) ? roleRaw[0] : roleRaw;
-
-  const departmentRaw = profile.departments as
-    | { name: string }
-    | { name: string }[]
-    | null;
-  const department = Array.isArray(departmentRaw) ? departmentRaw[0] : departmentRaw;
-
-  const positionRaw = profile.positions as { name: string } | { name: string }[] | null;
-  const position = Array.isArray(positionRaw) ? positionRaw[0] : positionRaw;
-
-  const managerRaw = profile.manager as
-    | { full_name: string }
-    | { full_name: string }[]
-    | null;
-  const manager = Array.isArray(managerRaw) ? managerRaw[0] : managerRaw;
-  const moduleAccess = (profile.user_module_access ?? []) as {
-    modules: { name: string } | { name: string }[] | null;
-  }[];
-
-  const moduleNames = moduleAccess
-    .map((entry) => {
-      const mod = entry.modules;
-      if (!mod) return null;
-      if (Array.isArray(mod)) return mod[0]?.name ?? null;
-      return mod.name;
-    })
-    .filter((name): name is string => Boolean(name));
-
+  const role = roleResult.data;
+  const department = departmentResult.data;
+  const position = positionResult.data;
+  const manager = managerResult.data;
   const lastEmail = emailLogs?.[0];
 
   const data: UserDetailData = {
