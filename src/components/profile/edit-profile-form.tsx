@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { uploadAvatarAction, updateMyProfileAction } from "@/server/actions/profile";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,15 +47,6 @@ interface FormState {
   address_state: string;
   theme_preference: string;
   language: string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 const THEME_LABELS: Record<(typeof THEME_PREFERENCES)[number], string> = {
@@ -207,12 +198,12 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
           <section className="space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">Foto de perfil</h3>
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
-                <AvatarFallback className="text-lg">
-                  {getInitials(fullName)}
-                </AvatarFallback>
-              </Avatar>
+              <ProfileAvatar
+                src={avatarUrl}
+                name={fullName}
+                className="h-16 w-16"
+                fallbackClassName="text-lg"
+              />
               <div className="space-y-2">
                 <input
                   ref={fileRef}

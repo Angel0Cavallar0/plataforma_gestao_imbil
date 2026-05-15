@@ -15,7 +15,7 @@ import {
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/constants";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileAvatar } from "@/components/ui/avatar";
 import { logoutAction } from "@/server/actions/auth";
 import { updateThemePreferenceAction } from "@/server/actions/profile";
 import type { UserProfile } from "@/types/auth";
@@ -29,15 +29,6 @@ const THEME_OPTIONS: {
   { value: "dark", label: "Escuro", icon: Moon },
   { value: "system", label: "Sistema", icon: Monitor },
 ];
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 interface SidebarUserFooterProps {
   profile: UserProfile;
@@ -63,8 +54,8 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
       }
     }
     if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [open]);
 
@@ -93,10 +84,11 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <Avatar className="h-8 w-8">
-          {profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt="" /> : null}
-          <AvatarFallback>{getInitials(profile.full_name)}</AvatarFallback>
-        </Avatar>
+        <ProfileAvatar
+          src={profile.avatar_url}
+          name={profile.full_name}
+          className="h-8 w-8 text-xs"
+        />
         <div className="grid flex-1 text-left text-sm leading-tight">
           <span className="truncate font-medium">{profile.full_name}</span>
           <span className="truncate text-xs text-sidebar-foreground/60">
@@ -170,15 +162,11 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
             )}
           </div>
 
-          <form action={logoutAction}>
+          <form action={logoutAction} className="w-full">
             <button
               type="submit"
               role="menuitem"
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-              onClick={() => {
-                setOpen(false);
-                setThemeMenuOpen(false);
-              }}
             >
               <LogOut className="h-4 w-4" />
               Sair

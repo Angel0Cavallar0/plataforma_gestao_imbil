@@ -3,123 +3,63 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type AvatarContextValue = {
-  hasSrc: boolean;
-  setHasSrc: (has: boolean) => void;
-  imageLoaded: boolean;
-  setImageLoaded: (loaded: boolean) => void;
-};
-
-const AvatarContext = React.createContext<AvatarContextValue | null>(null);
-
-function useAvatarContext() {
-  const ctx = React.useContext(AvatarContext);
-  if (!ctx) {
-    throw new Error("AvatarImage and AvatarFallback must be used within Avatar");
-  }
-  return ctx;
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
-function isImageReady(img: HTMLImageElement | null): boolean {
-  return Boolean(img?.complete && img.naturalWidth > 0);
-}
+export function ProfileAvatar({
+  src,
+  name,
+  className,
+  fallbackClassName,
+}: {
+  src?: string | null;
+  name: string;
+  className?: string;
+  fallbackClassName?: string;
+}) {
+  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
+  const [failedSrc, setFailedSrc] = React.useState<string | null>(null);
 
-const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => {
-    const [hasSrc, setHasSrc] = React.useState(false);
-    const [imageLoaded, setImageLoaded] = React.useState(false);
+  const imageReady = Boolean(src) && loadedSrc === src && failedSrc !== src;
+  const showImage = Boolean(src) && failedSrc !== src;
+  const showFallback = !imageReady;
 
-    return (
-      <AvatarContext.Provider value={{ hasSrc, setHasSrc, imageLoaded, setImageLoaded }}>
+  return (
+    <div className={cn("relative shrink-0 overflow-hidden rounded-full", className)}>
+      {showFallback && (
         <div
-          ref={ref}
           className={cn(
-            "relative h-8 w-8 shrink-0 overflow-hidden rounded-full",
-            className,
+            "absolute inset-0 flex items-center justify-center rounded-full bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+            fallbackClassName,
           )}
-          {...props}
         >
-          {children}
+          {getInitials(name)}
         </div>
-      </AvatarContext.Provider>
-    );
-  },
-);
-Avatar.displayName = "Avatar";
-
-const AvatarImage = React.forwardRef<
-  HTMLImageElement,
-  React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, src, alt = "", onLoad, onError, ...props }, ref) => {
-  const { setHasSrc, setImageLoaded } = useAvatarContext();
-  const imgRef = React.useRef<HTMLImageElement | null>(null);
-
-  const markLoadedIfReady = React.useCallback(() => {
-    if (isImageReady(imgRef.current)) {
-      setImageLoaded(true);
-    }
-  }, [setImageLoaded]);
-
-  React.useLayoutEffect(() => {
-    const active = Boolean(src);
-    setHasSrc(active);
-    setImageLoaded(false);
-    if (!active) return;
-    markLoadedIfReady();
-  }, [src, setHasSrc, setImageLoaded, markLoadedIfReady]);
-
-  if (!src) return null;
-
-  return (
-    <img
-      ref={(node) => {
-        imgRef.current = node;
-        if (typeof ref === "function") ref(node);
-        else if (ref) ref.current = node;
-        if (isImageReady(node)) {
-          setImageLoaded(true);
-        }
-      }}
-      src={src}
-      alt={alt}
-      onLoad={(e) => {
-        setImageLoaded(true);
-        onLoad?.(e);
-      }}
-      onError={(e) => {
-        setImageLoaded(false);
-        onError?.(e);
-      }}
-      className={cn("absolute inset-0 z-10 h-full w-full object-cover", className)}
-      {...props}
-    />
-  );
-});
-AvatarImage.displayName = "AvatarImage";
-
-const AvatarFallback = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
-  const { hasSrc, imageLoaded } = useAvatarContext();
-
-  if (hasSrc && imageLoaded) {
-    return null;
-  }
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "absolute inset-0 z-0 flex h-full w-full items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground",
-        className,
       )}
-      {...props}
-    >
-      {children}
+      {showImage && (
+        <img
+          key={src ?? undefined}
+          src={src!}
+          alt=""
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover",
+            !imageReady && "opacity-0",
+          )}
+          onLoad={() => setLoadedSrc(src!)}
+          onError={() => setFailedSrc(src!)}
+          ref={(node) => {
+            if (node?.complete && node.naturalWidth > 0) {
+              setLoadedSrc(src!);
+            }
+          }}
+        />
+      )}
     </div>
   );
-});
-AvatarFallback.displayName = "AvatarFallback";
-
-export { Avatar, AvatarImage, AvatarFallback };
+}
