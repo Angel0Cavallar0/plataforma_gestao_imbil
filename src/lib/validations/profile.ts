@@ -31,7 +31,7 @@ export const updateMyProfileSchema = z.object({
 
 export const avatarFileSchema = z
   .instanceof(File)
-  .refine((file) => file.size <= AVATAR_MAX_BYTES, "Arquivo muito grande (máx. 2MB)")
+  .refine((file) => file.size <= AVATAR_MAX_BYTES, "Arquivo muito grande (máx. 10MB)")
   .refine(
     (file) =>
       AVATAR_ALLOWED_TYPES.includes(file.type as (typeof AVATAR_ALLOWED_TYPES)[number]),

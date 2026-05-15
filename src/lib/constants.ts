@@ -47,7 +47,7 @@ export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 export const LANGUAGES = ["pt-BR"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+export const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
 export const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;

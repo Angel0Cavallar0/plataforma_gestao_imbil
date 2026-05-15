@@ -10,7 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { LANGUAGES, THEME_PREFERENCES } from "@/lib/constants";
+import {
+  AVATAR_ALLOWED_TYPES,
+  AVATAR_MAX_BYTES,
+  LANGUAGES,
+  THEME_PREFERENCES,
+} from "@/lib/constants";
 import { normalizeBrazilPhoneDisplay } from "@/lib/utils/phone";
 import type { AddressInput } from "@/lib/validations/profile";
 import type { ThemePreference } from "@/lib/constants";
@@ -115,14 +120,30 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
   }
 
   async function handleAvatarChange(file: File) {
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error("Arquivo muito grande. O limite é 10 MB.");
+      return;
+    }
+    if (
+      !AVATAR_ALLOWED_TYPES.includes(file.type as (typeof AVATAR_ALLOWED_TYPES)[number])
+    ) {
+      toast.error("Formato inválido. Use JPEG, PNG ou WebP.");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarUrl(previewUrl);
     setUploading(true);
     setError(null);
+
     const formData = new FormData();
     formData.set("avatar", file);
     const result = await uploadAvatarAction(formData);
+    URL.revokeObjectURL(previewUrl);
     setUploading(false);
 
     if (result.error) {
+      setAvatarUrl(savedAvatarUrl);
       setError(result.error);
       toast.error(result.error);
       return;
@@ -187,7 +208,7 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
             <h3 className="text-sm font-medium text-muted-foreground">Foto de perfil</h3>
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                {avatarUrl ? <AvatarImage src={avatarUrl} alt={fullName} /> : null}
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
                 <AvatarFallback className="text-lg">
                   {getInitials(fullName)}
                 </AvatarFallback>
@@ -214,7 +235,7 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
                   {uploading ? "Enviando…" : "Alterar foto"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  JPEG, PNG ou WebP — máx. 2 MB
+                  JPEG, PNG ou WebP — máx. 10 MB
                 </p>
               </div>
             </div>

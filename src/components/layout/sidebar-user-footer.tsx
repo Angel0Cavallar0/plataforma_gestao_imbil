@@ -94,9 +94,7 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
         aria-haspopup="menu"
       >
         <Avatar className="h-8 w-8">
-          {profile.avatar_url ? (
-            <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
-          ) : null}
+          {profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt="" /> : null}
           <AvatarFallback>{getInitials(profile.full_name)}</AvatarFallback>
         </Avatar>
         <div className="grid flex-1 text-left text-sm leading-tight">
