@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   formatAuthHashError,
   getPasswordPathForAuthType,
   parseAuthHash,
 } from "@/lib/auth/hash";
+import { establishSessionFromAuthHash } from "@/lib/auth/session-from-hash";
 
 /**
  * Página intermediária quando o Supabase redireciona para a raiz do site (Site URL)
@@ -28,7 +30,16 @@ export default function AuthCompletePage() {
 
     if (parsed.accessToken) {
       const path = getPasswordPathForAuthType(parsed.type);
-      window.location.replace(`${path}${window.location.hash}`);
+      const supabase = createClient();
+
+      void establishSessionFromAuthHash(supabase).then((result) => {
+        if (result.ok) {
+          window.location.replace(path);
+          return;
+        }
+        const message = encodeURIComponent(result.error);
+        window.location.replace(`/login?auth_error=${message}`);
+      });
       return;
     }
 

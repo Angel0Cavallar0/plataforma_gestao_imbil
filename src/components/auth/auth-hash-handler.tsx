@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   formatAuthHashError,
   getPasswordPathForAuthType,
   parseAuthHash,
 } from "@/lib/auth/hash";
+import { establishSessionFromAuthHash } from "@/lib/auth/session-from-hash";
 
 function readHashError(): string | null {
   if (typeof window === "undefined") return null;
@@ -31,9 +33,12 @@ export function AuthHashHandler({ children }: { children: React.ReactNode }) {
     if (!parsed?.accessToken) return;
 
     const targetPath = getPasswordPathForAuthType(parsed.type);
-    if (!window.location.pathname.startsWith(targetPath)) {
-      window.location.replace(`${targetPath}${window.location.hash}`);
+    if (window.location.pathname.startsWith(targetPath)) {
+      void establishSessionFromAuthHash(createClient());
+      return;
     }
+
+    window.location.replace(`${targetPath}${window.location.hash}`);
   }, []);
 
   return (
