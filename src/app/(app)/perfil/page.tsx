@@ -31,10 +31,10 @@ export default async function PerfilPage() {
       theme_preference,
       language,
       admission_date,
-      roles(name),
-      departments(name),
-      positions(name),
-      manager:profiles!profiles_manager_id_fkey(full_name)
+      manager_id,
+      roles!profiles_role_id_fkey(name),
+      departments!profiles_department_id_fkey(name),
+      positions!profiles_position_id_fkey(name)
     `,
     )
     .eq("id", session.profile.id)
@@ -51,10 +51,15 @@ export default async function PerfilPage() {
     );
   }
 
-  const manager = profile.manager as
-    | { full_name: string }
-    | { full_name: string }[]
-    | null;
+  let managerName: string | null = null;
+  if (profile.manager_id) {
+    const { data: manager } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", profile.manager_id)
+      .maybeSingle();
+    managerName = manager?.full_name ?? null;
+  }
 
   return (
     <div className="space-y-6">
@@ -79,9 +84,7 @@ export default async function PerfilPage() {
           position_name: relationName(
             profile.positions as { name: string } | { name: string }[],
           ),
-          manager_name: Array.isArray(manager)
-            ? (manager[0]?.full_name ?? null)
-            : (manager?.full_name ?? null),
+          manager_name: managerName,
           admission_date: profile.admission_date,
         }}
       />
