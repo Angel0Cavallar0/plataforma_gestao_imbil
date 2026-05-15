@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/configuracoes/usuarios", label: "Usuários e Permissões" },
+  { href: "/configuracoes/estrutura", label: "Estrutura Organizacional" },
   { href: "/configuracoes/modulos", label: "Parâmetros dos Módulos" },
   { href: "/configuracoes/auditoria", label: "Logs de Auditoria" },
 ];

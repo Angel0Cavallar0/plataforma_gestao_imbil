@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createUserAction } from "@/server/actions/users";
 import { Button } from "@/components/ui/button";
@@ -25,21 +25,101 @@ interface ModuleOption {
   name: string;
 }
 
+interface DepartmentOption {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  responsible_id: string | null;
+}
+
+interface PositionOption {
+  id: string;
+  name: string;
+  department_id: string | null;
+}
+
+interface ManagerOption {
+  id: string;
+  full_name: string;
+}
+
 interface CreateUserDialogProps {
   roles: RoleOption[];
   modules: ModuleOption[];
+  departments: DepartmentOption[];
+  positions: PositionOption[];
+  managers: ManagerOption[];
 }
 
-export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
+const selectClassName =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50";
+
+export function CreateUserDialog({
+  roles,
+  modules,
+  departments,
+  positions,
+  managers,
+}: CreateUserDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sectorId, setSectorId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [positionId, setPositionId] = useState("");
+  const [managerId, setManagerId] = useState("");
+
+  const sectors = useMemo(
+    () => departments.filter((d) => d.parent_id === null),
+    [departments],
+  );
+
+  const sectorDepartments = useMemo(
+    () => departments.filter((d) => d.parent_id === sectorId),
+    [departments, sectorId],
+  );
+
+  const departmentPositions = useMemo(
+    () => positions.filter((p) => p.department_id === departmentId),
+    [positions, departmentId],
+  );
+
+  const selectedDepartment = departments.find((d) => d.id === departmentId);
+
+  function resetOrgFields() {
+    setSectorId("");
+    setDepartmentId("");
+    setPositionId("");
+    setManagerId("");
+  }
+
+  function handleSectorChange(nextSectorId: string) {
+    setSectorId(nextSectorId);
+    setDepartmentId("");
+    setPositionId("");
+    setManagerId("");
+  }
+
+  function handleDepartmentChange(nextDepartmentId: string) {
+    setDepartmentId(nextDepartmentId);
+    setPositionId("");
+    const dept = departments.find((d) => d.id === nextDepartmentId);
+    if (dept?.responsible_id) {
+      setManagerId(dept.responsible_id);
+    } else {
+      setManagerId("");
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null);
     setIsSubmitting(true);
     try {
+      if (departmentId) formData.set("department_id", departmentId);
+      if (positionId) formData.set("position_id", positionId);
+      if (managerId) formData.set("manager_id", managerId);
+
       const result = await createUserAction(formData);
       if (typeof result.error === "string") {
         setError(result.error);
@@ -47,6 +127,7 @@ export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
         setError("Verifique os campos.");
       } else {
         setOpen(false);
+        resetOrgFields();
         router.refresh();
       }
     } finally {
@@ -57,7 +138,10 @@ export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
   function handleOpenChange(nextOpen: boolean) {
     if (!isSubmitting) {
       setOpen(nextOpen);
-      if (!nextOpen) setError(null);
+      if (!nextOpen) {
+        setError(null);
+        resetOrgFields();
+      }
     }
   }
 
@@ -65,7 +149,7 @@ export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
     <>
       <Button onClick={() => setOpen(true)}>Criar novo usuário</Button>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo usuário</DialogTitle>
             <DialogDescription>
@@ -104,7 +188,7 @@ export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
                   name="role_id"
                   required
                   disabled={isSubmitting}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
+                  className={selectClassName}
                 >
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -112,6 +196,89 @@ export function CreateUserDialog({ roles, modules }: CreateUserDialogProps) {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sector_id">Setor</Label>
+                <select
+                  id="sector_id"
+                  value={sectorId}
+                  onChange={(e) => handleSectorChange(e.target.value)}
+                  disabled={isSubmitting || sectors.length === 0}
+                  className={selectClassName}
+                >
+                  <option value="">Selecione...</option>
+                  {sectors.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="department_id">Departamento</Label>
+                <select
+                  id="department_id"
+                  value={departmentId}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  disabled={isSubmitting || !sectorId}
+                  className={selectClassName}
+                >
+                  <option value="">Selecione...</option>
+                  {sectorDepartments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="position_id">Cargo</Label>
+                <select
+                  id="position_id"
+                  value={positionId}
+                  onChange={(e) => setPositionId(e.target.value)}
+                  disabled={isSubmitting || !departmentId}
+                  className={selectClassName}
+                >
+                  <option value="">Selecione...</option>
+                  {departmentPositions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="manager_id">Gestor direto</Label>
+                <select
+                  id="manager_id"
+                  value={managerId}
+                  onChange={(e) => setManagerId(e.target.value)}
+                  disabled={isSubmitting}
+                  className={selectClassName}
+                >
+                  <option value="">Nenhum</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}
+                    </option>
+                  ))}
+                </select>
+                {selectedDepartment?.responsible_id &&
+                  managerId === selectedDepartment.responsible_id && (
+                    <p className="text-xs text-muted-foreground">
+                      Pré-preenchido com o responsável do departamento.
+                    </p>
+                  )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admission_date">Data de admissão</Label>
+                <Input
+                  id="admission_date"
+                  name="admission_date"
+                  type="date"
+                  disabled={isSubmitting}
+                />
               </div>
             </div>
             <div className="space-y-1">

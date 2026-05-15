@@ -19,13 +19,20 @@ export function hasMinRole(profile: UserProfile, minSlug: RoleSlug): boolean {
 
 export function canAccessConfig(profile: UserProfile): boolean {
   return (
-    profile.role_slug !== "diretoria" &&
-    profile.hierarchy_level >= MIN_LEVEL_SUPERVISAO
+    profile.role_slug !== "diretoria" && profile.hierarchy_level >= MIN_LEVEL_SUPERVISAO
   );
 }
 
 export function canManageUsers(profile: UserProfile): boolean {
   return profile.hierarchy_level >= MIN_LEVEL_GESTOR;
+}
+
+export function canViewOrgStructure(profile: UserProfile): boolean {
+  return canAccessConfig(profile);
+}
+
+export function canManageOrgStructure(profile: UserProfile): boolean {
+  return canManageUsers(profile);
 }
 
 export function isSuperadmin(profile: UserProfile): boolean {
