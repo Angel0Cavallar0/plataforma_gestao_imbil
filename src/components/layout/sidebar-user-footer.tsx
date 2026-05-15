@@ -72,7 +72,7 @@ export function SidebarUserFooter({ profile }: SidebarUserFooterProps) {
       {open && (
         <div
           role="menu"
-          className="absolute bottom-full left-2 right-2 z-50 mb-1 overflow-hidden rounded-lg border border-sidebar-border bg-popover p-1 text-popover-foreground shadow-lg"
+          className="absolute bottom-2 left-full z-50 ml-2 min-w-[12rem] overflow-hidden rounded-lg border border-sidebar-border bg-popover p-1 text-popover-foreground shadow-lg"
         >
           <button
             type="button"
