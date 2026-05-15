@@ -16,8 +16,8 @@ export const addressSchema = z.object({
 });
 
 export const updateMyProfileSchema = z.object({
-  phone: z.string().max(20).optional().nullable(),
-  whatsapp: z.string().max(20).optional().nullable(),
+  phone: z.string().max(16).optional().nullable(),
+  whatsapp: z.string().max(16).optional().nullable(),
   birth_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")

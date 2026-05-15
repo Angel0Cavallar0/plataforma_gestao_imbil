@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { LANGUAGES, THEME_PREFERENCES } from "@/lib/constants";
+import { normalizeBrazilPhoneDisplay } from "@/lib/utils/phone";
 import type { AddressInput } from "@/lib/validations/profile";
 import type { ThemePreference } from "@/lib/constants";
 
@@ -28,6 +30,20 @@ interface EditProfileFormProps {
   initial: ProfileFormData;
 }
 
+interface FormState {
+  phone: string;
+  whatsapp: string;
+  birth_date: string;
+  address_cep: string;
+  address_street: string;
+  address_number: string;
+  address_complement: string;
+  address_city: string;
+  address_state: string;
+  theme_preference: string;
+  language: string;
+}
+
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -43,15 +59,60 @@ const THEME_LABELS: Record<(typeof THEME_PREFERENCES)[number], string> = {
   system: "Sistema",
 };
 
+function toFormState(data: ProfileFormData): FormState {
+  const address = data.address ?? {};
+  return {
+    phone: normalizeBrazilPhoneDisplay(data.phone),
+    whatsapp: normalizeBrazilPhoneDisplay(data.whatsapp),
+    birth_date: data.birth_date ?? "",
+    address_cep: address.cep ?? "",
+    address_street: address.street ?? "",
+    address_number: address.number ?? "",
+    address_complement: address.complement ?? "",
+    address_city: address.city ?? "",
+    address_state: address.state ?? "",
+    theme_preference: data.theme_preference,
+    language: data.language,
+  };
+}
+
+function buildFormData(form: FormState): FormData {
+  const fd = new FormData();
+  fd.set("phone", form.phone);
+  fd.set("whatsapp", form.whatsapp);
+  fd.set("birth_date", form.birth_date);
+  fd.set("address_cep", form.address_cep);
+  fd.set("address_street", form.address_street);
+  fd.set("address_number", form.address_number);
+  fd.set("address_complement", form.address_complement);
+  fd.set("address_city", form.address_city);
+  fd.set("address_state", form.address_state);
+  fd.set("theme_preference", form.theme_preference);
+  fd.set("language", form.language);
+  return fd;
+}
+
 export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
   const { setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [saved, setSaved] = useState(initial);
+  const [savedAvatarUrl, setSavedAvatarUrl] = useState(initial.avatar_url);
+  const [form, setForm] = useState(() => toFormState(initial));
   const [avatarUrl, setAvatarUrl] = useState(initial.avatar_url);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const address = initial.address ?? {};
+  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleDiscard() {
+    setForm(toFormState(saved));
+    setAvatarUrl(savedAvatarUrl);
+    setError(null);
+    toast.message("Alterações descartadas.");
+  }
 
   async function handleAvatarChange(file: File) {
     setUploading(true);
@@ -69,14 +130,16 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
 
     if (result.avatarUrl) {
       setAvatarUrl(result.avatarUrl);
+      setSavedAvatarUrl(result.avatarUrl);
       toast.success("Foto atualizada.");
     }
   }
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setSaving(true);
     setError(null);
-    const result = await updateMyProfileAction(formData);
+    const result = await updateMyProfileAction(buildFormData(form));
     setSaving(false);
 
     if (result.error) {
@@ -89,10 +152,27 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
       return;
     }
 
-    const theme = formData.get("theme_preference") as ThemePreference;
+    const theme = form.theme_preference as ThemePreference;
     if (theme === "system") setTheme("system");
     else setTheme(theme);
 
+    const nextSaved: ProfileFormData = {
+      phone: form.phone || null,
+      whatsapp: form.whatsapp || null,
+      birth_date: form.birth_date || null,
+      avatar_url: avatarUrl,
+      address: {
+        cep: form.address_cep || null,
+        street: form.address_street || null,
+        number: form.address_number || null,
+        complement: form.address_complement || null,
+        city: form.address_city || null,
+        state: form.address_state || null,
+      },
+      theme_preference: form.theme_preference,
+      language: form.language,
+    };
+    setSaved(nextSaved);
     toast.success("Perfil atualizado.");
   }
 
@@ -102,7 +182,7 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
         <CardTitle>Seus dados</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <section className="space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">Foto de perfil</h3>
             <div className="flex items-center gap-4">
@@ -145,31 +225,27 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="phone">Telefone celular</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  name="phone"
-                  type="tel"
-                  defaultValue={initial.phone ?? ""}
-                  placeholder="(00) 00000-0000"
+                  value={form.phone}
+                  onChange={(value) => updateField("phone", value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="whatsapp">WhatsApp</Label>
-                <Input
+                <PhoneInput
                   id="whatsapp"
-                  name="whatsapp"
-                  type="tel"
-                  defaultValue={initial.whatsapp ?? ""}
-                  placeholder="(00) 00000-0000"
+                  value={form.whatsapp}
+                  onChange={(value) => updateField("whatsapp", value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="birth_date">Data de nascimento</Label>
                 <Input
                   id="birth_date"
-                  name="birth_date"
                   type="date"
-                  defaultValue={initial.birth_date ?? ""}
+                  value={form.birth_date}
+                  onChange={(e) => updateField("birth_date", e.target.value)}
                 />
               </div>
             </div>
@@ -182,8 +258,8 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
                 <Label htmlFor="address_cep">CEP</Label>
                 <Input
                   id="address_cep"
-                  name="address_cep"
-                  defaultValue={address.cep ?? ""}
+                  value={form.address_cep}
+                  onChange={(e) => updateField("address_cep", e.target.value)}
                   placeholder="00000-000"
                 />
               </div>
@@ -191,41 +267,41 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
                 <Label htmlFor="address_street">Rua</Label>
                 <Input
                   id="address_street"
-                  name="address_street"
-                  defaultValue={address.street ?? ""}
+                  value={form.address_street}
+                  onChange={(e) => updateField("address_street", e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="address_number">Número</Label>
                 <Input
                   id="address_number"
-                  name="address_number"
-                  defaultValue={address.number ?? ""}
+                  value={form.address_number}
+                  onChange={(e) => updateField("address_number", e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="address_complement">Complemento</Label>
                 <Input
                   id="address_complement"
-                  name="address_complement"
-                  defaultValue={address.complement ?? ""}
+                  value={form.address_complement}
+                  onChange={(e) => updateField("address_complement", e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="address_city">Cidade</Label>
                 <Input
                   id="address_city"
-                  name="address_city"
-                  defaultValue={address.city ?? ""}
+                  value={form.address_city}
+                  onChange={(e) => updateField("address_city", e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="address_state">UF</Label>
                 <Input
                   id="address_state"
-                  name="address_state"
                   maxLength={2}
-                  defaultValue={address.state ?? ""}
+                  value={form.address_state}
+                  onChange={(e) => updateField("address_state", e.target.value)}
                   placeholder="SP"
                 />
               </div>
@@ -239,8 +315,8 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
                 <Label htmlFor="theme_preference">Tema</Label>
                 <select
                   id="theme_preference"
-                  name="theme_preference"
-                  defaultValue={initial.theme_preference}
+                  value={form.theme_preference}
+                  onChange={(e) => updateField("theme_preference", e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   {THEME_PREFERENCES.map((t) => (
@@ -254,8 +330,8 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
                 <Label htmlFor="language">Idioma</Label>
                 <select
                   id="language"
-                  name="language"
-                  defaultValue={initial.language}
+                  value={form.language}
+                  onChange={(e) => updateField("language", e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   {LANGUAGES.map((lang) => (
@@ -270,9 +346,19 @@ export function EditProfileForm({ fullName, initial }: EditProfileFormProps) {
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button type="submit" disabled={saving}>
-            {saving ? "Salvando…" : "Salvar alterações"}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" variant="success" disabled={saving}>
+              {saving ? "Salvando…" : "Salvar alterações"}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={handleDiscard}
+            >
+              Descartar alterações
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
