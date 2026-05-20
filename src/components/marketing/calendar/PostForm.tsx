@@ -28,6 +28,7 @@ import {
   uploadAssetAction,
 } from "@/server/actions/marketing/content";
 import { PostPreviewPanel } from "@/components/marketing/calendar/PostPreviewPanel";
+import { CampaignPickerDialog } from "@/components/marketing/calendar/CampaignPickerDialog";
 import type { CreatePostInput } from "@/lib/validations/marketing/content";
 import type { ContentType, Platform, PostWithRelations } from "@/types/marketing";
 import { toast } from "sonner";
@@ -48,6 +49,11 @@ function toCreatableContentType(value: ContentType | undefined): CreatableConten
   return "imagem";
 }
 
+function assetPreviewUrl(asset: PostWithRelations["assets"][0] | undefined) {
+  if (!asset) return null;
+  return asset.preview_url ?? asset.public_url ?? null;
+}
+
 type Props = {
   platforms: Platform[];
   campaigns: { id: string; name: string }[];
@@ -55,20 +61,29 @@ type Props = {
   post?: PostWithRelations;
   layout?: "default" | "compose";
   cancelHref?: string;
+  /** When editing an existing post; defaults to true for new posts. */
+  isEditing?: boolean;
+  onCancelEdit?: () => void;
 };
 
 export function PostForm({
   platforms,
-  campaigns,
+  campaigns: initialCampaigns,
   credentials,
   post,
   layout = "default",
   cancelHref = "/modulos/marketing/calendario-conteudo",
+  isEditing: isEditingProp,
+  onCancelEdit,
 }: Props) {
   const router = useRouter();
   const showPreviewPanel = layout === "compose";
   const isNewCompose = showPreviewPanel && !post;
+  const isEditing = isEditingProp ?? !post;
+  const readOnly = !!post && !isEditing;
   const [pending, startTransition] = useTransition();
+  const [campaigns, setCampaigns] = useState(initialCampaigns);
+  const [campaignId, setCampaignId] = useState<string | null>(post?.campaign_id ?? null);
   const [copy, setCopy] = useState(post?.copy ?? "");
   const [hashtagsRaw, setHashtagsRaw] = useState((post?.hashtags ?? []).join(", "));
   const [platformId, setPlatformId] = useState(
@@ -81,13 +96,11 @@ export function PostForm({
   const [contentType, setContentType] = useState<CreatableContentType>(
     toCreatableContentType(post?.content_type),
   );
-  const initialAsset = post?.assets?.[0];
-  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(
-    initialAsset?.public_url ?? null,
-  );
-  const [mediaMimeType, setMediaMimeType] = useState<string | undefined>(
-    initialAsset?.mime_type ?? undefined,
-  );
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [fileMimeType, setFileMimeType] = useState<string | undefined>();
+  const existingAssetUrl = assetPreviewUrl(post?.assets?.[0]);
+  const mediaPreviewUrl = filePreviewUrl ?? existingAssetUrl;
+  const mediaMimeType = fileMimeType ?? post?.assets?.[0]?.mime_type ?? undefined;
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -152,11 +165,13 @@ export function PostForm({
 
   useEffect(() => {
     return () => {
-      if (mediaPreviewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(mediaPreviewUrl);
+      if (filePreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(filePreviewUrl);
       }
     };
-  }, [mediaPreviewUrl]);
+  }, [filePreviewUrl]);
+
+  const fieldDisabled = readOnly || isIgPublished;
 
   function markDirty() {
     if (!isDirty) setIsDirty(true);
@@ -179,7 +194,7 @@ export function PostForm({
   function buildSharedPayload(form: FormData) {
     return {
       title: String(form.get("title")),
-      campaign_id: String(form.get("campaign_id") || "") || null,
+      campaign_id: campaignId,
       content_type: contentType,
       copy: copy || undefined,
       hashtags,
@@ -275,26 +290,36 @@ export function PostForm({
         toast.success("Rascunho salvo");
       }
 
-      router.push(`/modulos/marketing/calendario-conteudo/${postId}`);
-      router.refresh();
+      if (post && post.status !== "rascunho" && onCancelEdit) {
+        router.refresh();
+        onCancelEdit();
+      } else {
+        router.push(`/modulos/marketing/calendario-conteudo/${postId}`);
+        router.refresh();
+      }
     });
   }
 
   function handleCancelClick() {
+    if (post && onCancelEdit && isEditing) {
+      if (isDirty) setDiscardOpen(true);
+      else onCancelEdit();
+      return;
+    }
     if (isDirty) setDiscardOpen(true);
     else router.push(cancelHref);
   }
 
   function onFileChange(file: File | null) {
     markDirty();
-    if (mediaPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(mediaPreviewUrl);
+    if (filePreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(filePreviewUrl);
     if (!file?.size) {
-      setMediaPreviewUrl(null);
-      setMediaMimeType(undefined);
+      setFilePreviewUrl(null);
+      setFileMimeType(undefined);
       return;
     }
-    setMediaPreviewUrl(URL.createObjectURL(file));
-    setMediaMimeType(file.type);
+    setFilePreviewUrl(URL.createObjectURL(file));
+    setFileMimeType(file.type);
   }
 
   const formFields = (
@@ -309,6 +334,7 @@ export function PostForm({
             minLength={3}
             defaultValue={post?.title}
             placeholder="Ex: Lançamento linha X — feed IG"
+            disabled={fieldDisabled}
             onChange={markDirty}
           />
         </div>
@@ -331,6 +357,7 @@ export function PostForm({
                     type="checkbox"
                     className="h-4 w-4 rounded border-input"
                     checked={selectedPlatformIds.includes(p.id)}
+                    disabled={fieldDisabled}
                     onChange={() => togglePlatform(p.id)}
                   />
                   <span>{p.name}</span>
@@ -345,7 +372,11 @@ export function PostForm({
         ) : (
           <div className="space-y-2">
             <Label>Plataforma</Label>
-            <Select value={platformId} onChange={(e) => setPlatformId(e.target.value)}>
+            <Select
+              value={platformId}
+              disabled={fieldDisabled}
+              onChange={(e) => setPlatformId(e.target.value)}
+            >
               {platforms.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -359,6 +390,7 @@ export function PostForm({
           <Label>Tipo de conteúdo</Label>
           <Select
             value={contentType}
+            disabled={fieldDisabled}
             onChange={(e) => {
               markDirty();
               setContentType(e.target.value as CreatableContentType);
@@ -379,6 +411,7 @@ export function PostForm({
             name="credential_id"
             className="w-full"
             value={metaCredentialId}
+            disabled={fieldDisabled}
             onChange={(e) => {
               markDirty();
               setMetaCredentialId(e.target.value);
@@ -394,20 +427,17 @@ export function PostForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="campaign_id">Campanha (opcional)</Label>
-          <Select
-            id="campaign_id"
-            name="campaign_id"
-            defaultValue={post?.campaign_id ?? ""}
-            onChange={markDirty}
-          >
-            <option value="">Nenhuma</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          <Label>Campanha (opcional)</Label>
+          <CampaignPickerDialog
+            campaigns={campaigns}
+            value={campaignId}
+            disabled={fieldDisabled}
+            onChange={(id) => {
+              markDirty();
+              setCampaignId(id);
+            }}
+            onCampaignsChange={setCampaigns}
+          />
         </div>
 
         <div className="space-y-2">
@@ -417,6 +447,7 @@ export function PostForm({
             name="scheduled_at"
             type="datetime-local"
             required
+            disabled={fieldDisabled}
             defaultValue={
               post?.scheduled_at
                 ? new Date(post.scheduled_at).toISOString().slice(0, 16)
@@ -445,7 +476,7 @@ export function PostForm({
           name="copy"
           rows={6}
           value={copy}
-          disabled={isIgPublished}
+          disabled={fieldDisabled}
           onChange={(e) => {
             markDirty();
             setCopy(e.target.value);
@@ -464,6 +495,7 @@ export function PostForm({
         <Input
           id="hashtags"
           value={hashtagsRaw}
+          disabled={fieldDisabled}
           onChange={(e) => {
             markDirty();
             setHashtagsRaw(e.target.value);
@@ -474,13 +506,37 @@ export function PostForm({
 
       <div className="space-y-2">
         <Label htmlFor="file">Mídia</Label>
-        <Input
-          id="file"
-          name="file"
-          type="file"
-          accept="image/jpeg,image/png,video/mp4,video/quicktime"
-          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-        />
+        {!readOnly && (
+          <Input
+            id="file"
+            name="file"
+            type="file"
+            accept="image/jpeg,image/png,video/mp4,video/quicktime"
+            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+          />
+        )}
+        {mediaPreviewUrl && (
+          <div className="overflow-hidden rounded-md border">
+            {mediaMimeType?.startsWith("video/") ||
+            contentType === "video" ||
+            contentType === "reels" ? (
+              <video
+                src={mediaPreviewUrl}
+                className="max-h-48 w-full object-contain"
+                controls
+                muted
+                playsInline
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaPreviewUrl}
+                alt=""
+                className="max-h-48 w-full object-contain"
+              />
+            )}
+          </div>
+        )}
         {post?.assets?.length ? (
           <ul className="text-xs text-muted-foreground">
             {post.assets.map((a) => (
@@ -489,6 +545,8 @@ export function PostForm({
               </li>
             ))}
           </ul>
+        ) : readOnly && !post?.assets?.length ? (
+          <p className="text-xs text-muted-foreground">Nenhuma mídia anexada.</p>
         ) : null}
       </div>
     </>
@@ -532,7 +590,9 @@ export function PostForm({
     </div>
   );
 
-  const actionButtons = isNewCompose ? (
+  const showFormActions = !post || isEditing;
+
+  const actionButtons = !showFormActions ? null : isNewCompose ? (
     composeStyleActions
   ) : showPreviewPanel && post ? (
     composeStyleActions
@@ -576,7 +636,10 @@ export function PostForm({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => router.push(cancelHref)}
+            onClick={() => {
+              if (post && onCancelEdit) onCancelEdit();
+              else router.push(cancelHref);
+            }}
           >
             Descartar
           </Button>
@@ -603,7 +666,7 @@ export function PostForm({
             accountLabel={accountLabel}
           />
 
-          <div className="lg:col-span-2">{actionButtons}</div>
+          {actionButtons ? <div className="lg:col-span-2">{actionButtons}</div> : null}
         </form>
         {discardDialog}
       </>

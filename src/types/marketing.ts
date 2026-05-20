@@ -83,6 +83,10 @@ export type Asset = {
   created_at: string;
 };
 
+export type AssetWithPreview = Asset & {
+  preview_url: string | null;
+};
+
 export type Comment = {
   id: string;
   post_id: string;
@@ -121,7 +125,7 @@ export type PostWithRelations = Post & {
   platform: Pick<Platform, "slug" | "name" | "icon" | "color">;
   campaign: Pick<Campaign, "id" | "name" | "color"> | null;
   assigned_to_profile: { full_name: string; avatar_url: string | null } | null;
-  assets: Asset[];
+  assets: AssetWithPreview[];
 };
 
 export type CalendarPostEvent = {

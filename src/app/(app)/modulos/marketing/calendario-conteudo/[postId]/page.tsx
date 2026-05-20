@@ -1,15 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PostForm } from "@/components/marketing/calendar/PostForm";
-import { PostStatusBadge } from "@/components/marketing/calendar/PostStatusBadge";
-import { PostDetailActions } from "@/components/marketing/calendar/PostDetailActions";
+import { PostDetailShell } from "@/components/marketing/calendar/PostDetailShell";
 import {
   getActivePlatforms,
   getCampaigns,
   getMetaCredentials,
   getPostById,
 } from "@/server/queries/marketing/content";
-import { CONTENT_TYPE_LABELS } from "@/lib/constants/marketing";
 
 export default async function PostDetailPage({
   params,
@@ -31,44 +27,15 @@ export default async function PostDetailPage({
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/modulos/marketing/calendario-conteudo"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Voltar ao calendário
-        </Link>
-        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold">{post.title}</h1>
-              <PostStatusBadge status={post.status} />
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {post.platform.name} · {CONTENT_TYPE_LABELS[post.content_type]} ·{" "}
-              {new Date(post.scheduled_at).toLocaleString("pt-BR")}
-            </p>
-          </div>
-          <PostDetailActions post={post} compact />
-        </div>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Edite o conteúdo à esquerda e confira a prévia da rede à direita.
-        </p>
-      </div>
-
-      <PostForm
-        layout="compose"
-        post={post}
-        cancelHref="/modulos/marketing/calendario-conteudo"
-        platforms={socialPlatforms}
-        campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
-        credentials={credentials.map((c) => ({
-          id: c.id as string,
-          label: c.label as string,
-          platform_id: c.platform_id as string,
-        }))}
-      />
-    </div>
+    <PostDetailShell
+      post={post}
+      platforms={socialPlatforms}
+      campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
+      credentials={credentials.map((c) => ({
+        id: c.id as string,
+        label: c.label as string,
+        platform_id: c.platform_id as string,
+      }))}
+    />
   );
 }

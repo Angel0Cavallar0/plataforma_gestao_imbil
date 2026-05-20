@@ -426,6 +426,7 @@ export async function createCampaignAction(input: CreateCampaignInput) {
     .select()
     .single();
   if (error) return { error: error.message };
+  revalidateCalendar();
   revalidatePath("/modulos/marketing/calendario-conteudo/campanhas");
   return { data: campaign };
 }
