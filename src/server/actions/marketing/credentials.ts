@@ -88,7 +88,8 @@ export async function saveMetaCredentialsAction(input: SaveMetaCredentialsInput)
     metadata: { label: data.label, valid },
   });
 
-  revalidatePath("/configuracoes/modulos/marketing/integracoes");
+  // UI refresh is triggered by router.refresh() on the client to avoid
+  // racing revalidatePath + refresh (transient "page couldn't load").
   return { data: cred, connectionOk: valid };
 }
 

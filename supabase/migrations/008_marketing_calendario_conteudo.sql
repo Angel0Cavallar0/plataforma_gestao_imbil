@@ -2,10 +2,16 @@
 
 CREATE SCHEMA IF NOT EXISTS marketing;
 
-GRANT USAGE ON SCHEMA marketing TO authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA marketing TO authenticated, service_role;
+GRANT USAGE ON SCHEMA marketing TO anon, authenticated, service_role, authenticator;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA marketing
+  TO authenticated, service_role;
+GRANT SELECT ON ALL TABLES IN SCHEMA marketing TO anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA marketing
+  TO authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA marketing
-  GRANT ALL ON TABLES TO authenticated, service_role;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA marketing
+  GRANT USAGE, SELECT ON SEQUENCES TO authenticated, service_role;
 
 -- =========================================================
 -- Base tables (shared module)
