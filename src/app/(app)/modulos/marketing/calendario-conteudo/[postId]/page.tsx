@@ -31,28 +31,36 @@ export default async function PostDetailPage({
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <Link
           href="/modulos/marketing/calendario-conteudo"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Calendário
+          ← Voltar ao calendário
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold">{post.title}</h1>
-          <PostStatusBadge status={post.status} />
+        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold">{post.title}</h1>
+              <PostStatusBadge status={post.status} />
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {post.platform.name} · {CONTENT_TYPE_LABELS[post.content_type]} ·{" "}
+              {new Date(post.scheduled_at).toLocaleString("pt-BR")}
+            </p>
+          </div>
+          <PostDetailActions post={post} compact />
         </div>
-        <p className="text-sm text-muted-foreground">
-          {post.platform.name} · {CONTENT_TYPE_LABELS[post.content_type]} ·{" "}
-          {new Date(post.scheduled_at).toLocaleString("pt-BR")}
+        <p className="mt-4 text-sm text-muted-foreground">
+          Edite o conteúdo à esquerda e confira a prévia da rede à direita.
         </p>
       </div>
 
-      <PostDetailActions post={post} />
-
       <PostForm
+        layout="compose"
         post={post}
+        cancelHref="/modulos/marketing/calendario-conteudo"
         platforms={socialPlatforms}
         campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
         credentials={credentials.map((c) => ({

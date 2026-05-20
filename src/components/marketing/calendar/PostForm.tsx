@@ -27,9 +27,11 @@ import {
   updatePostAction,
   uploadAssetAction,
 } from "@/server/actions/marketing/content";
-import { PostSocialPreview } from "@/components/marketing/calendar/PostSocialPreview";
+import { PostPreviewPanel } from "@/components/marketing/calendar/PostPreviewPanel";
 import type { CreatePostInput } from "@/lib/validations/marketing/content";
 import type { ContentType, Platform, PostWithRelations } from "@/types/marketing";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type CreatableContentType = CreatePostInput["content_type"];
 
@@ -45,8 +47,6 @@ function toCreatableContentType(value: ContentType | undefined): CreatableConten
   }
   return "imagem";
 }
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 type Props = {
   platforms: Platform[];
@@ -66,7 +66,8 @@ export function PostForm({
   cancelHref = "/modulos/marketing/calendario-conteudo",
 }: Props) {
   const router = useRouter();
-  const isCompose = layout === "compose" && !post;
+  const showPreviewPanel = layout === "compose";
+  const isNewCompose = showPreviewPanel && !post;
   const [pending, startTransition] = useTransition();
   const [copy, setCopy] = useState(post?.copy ?? "");
   const [hashtagsRaw, setHashtagsRaw] = useState((post?.hashtags ?? []).join(", "));
@@ -80,8 +81,13 @@ export function PostForm({
   const [contentType, setContentType] = useState<CreatableContentType>(
     toCreatableContentType(post?.content_type),
   );
-  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
-  const [mediaMimeType, setMediaMimeType] = useState<string | undefined>();
+  const initialAsset = post?.assets?.[0];
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(
+    initialAsset?.public_url ?? null,
+  );
+  const [mediaMimeType, setMediaMimeType] = useState<string | undefined>(
+    initialAsset?.mime_type ?? undefined,
+  );
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -107,11 +113,11 @@ export function PostForm({
 
   const previewPlatforms = useMemo(
     () =>
-      (isCompose ? selectedPlatforms : platform ? [platform] : []).map((p) => ({
+      (isNewCompose ? selectedPlatforms : platform ? [platform] : []).map((p) => ({
         slug: p.slug,
         name: p.name,
       })),
-    [isCompose, selectedPlatforms, platform],
+    [isNewCompose, selectedPlatforms, platform],
   );
 
   const instagramPlatformId = useMemo(
@@ -140,15 +146,15 @@ export function PostForm({
   }, [post]);
 
   const accountLabel = useMemo(() => {
-    const credId = isCompose
-      ? metaCredentialId
-      : (post?.credential_id ?? metaCredentialId);
+    const credId = metaCredentialId || post?.credential_id;
     return credentials.find((c) => c.id === credId)?.label;
-  }, [isCompose, metaCredentialId, credentials, post?.credential_id]);
+  }, [metaCredentialId, credentials, post?.credential_id]);
 
   useEffect(() => {
     return () => {
-      if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
+      if (mediaPreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(mediaPreviewUrl);
+      }
     };
   }, [mediaPreviewUrl]);
 
@@ -184,9 +190,7 @@ export function PostForm({
   }
 
   function buildPayload(form: FormData, targetPlatformId: string) {
-    const credId = isCompose
-      ? metaCredentialId
-      : metaCredentialId || String(form.get("credential_id") || "");
+    const credId = metaCredentialId || String(form.get("credential_id") || "");
     return {
       ...buildSharedPayload(form),
       platform_id: targetPlatformId,
@@ -201,7 +205,7 @@ export function PostForm({
         return;
       }
 
-      if (isCompose) {
+      if (isNewCompose) {
         if (!selectedPlatformIds.length) {
           toast.error("Selecione ao menos uma rede social");
           return;
@@ -283,7 +287,7 @@ export function PostForm({
 
   function onFileChange(file: File | null) {
     markDirty();
-    if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
+    if (mediaPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(mediaPreviewUrl);
     if (!file?.size) {
       setMediaPreviewUrl(null);
       setMediaMimeType(undefined);
@@ -309,7 +313,7 @@ export function PostForm({
           />
         </div>
 
-        {isCompose ? (
+        {isNewCompose ? (
           <div className="space-y-2 sm:col-span-2">
             <Label>Redes sociais</Label>
             <div className="flex flex-wrap gap-3">
@@ -334,7 +338,8 @@ export function PostForm({
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Será criado um post por rede selecionada (mesmo conteúdo).
+              Será criado um post por rede selecionada (mesmo conteúdo). A mesma conta
+              Meta vale para Instagram e Facebook.
             </p>
           </div>
         ) : (
@@ -367,11 +372,12 @@ export function PostForm({
           </Select>
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="meta_credential_id">Conta Meta (Instagram e Facebook)</Label>
           <Select
             id="meta_credential_id"
             name="credential_id"
+            className="w-full"
             value={metaCredentialId}
             onChange={(e) => {
               markDirty();
@@ -385,12 +391,6 @@ export function PostForm({
               </option>
             ))}
           </Select>
-          {isCompose && selectedPlatforms.some((p) => p.slug === "facebook") && (
-            <p className="text-xs text-muted-foreground">
-              A mesma conta e os mesmos IDs (Page ID, Instagram User ID) serão usados nas
-              redes selecionadas.
-            </p>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -472,15 +472,6 @@ export function PostForm({
         />
       </div>
 
-      {!isCompose && preview && (
-        <div className="rounded-md border bg-muted/40 p-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">
-            Prévia da publicação
-          </p>
-          <p className="whitespace-pre-wrap text-sm">{preview}</p>
-        </div>
-      )}
-
       <div className="space-y-2">
         <Label htmlFor="file">Mídia</Label>
         <Input
@@ -503,7 +494,7 @@ export function PostForm({
     </>
   );
 
-  const actionButtons = isCompose ? (
+  const composeStyleActions = (
     <div className="flex flex-wrap items-center gap-2 border-t pt-4">
       <Button
         type="button"
@@ -539,6 +530,12 @@ export function PostForm({
         Agendar
       </Button>
     </div>
+  );
+
+  const actionButtons = isNewCompose ? (
+    composeStyleActions
+  ) : showPreviewPanel && post ? (
+    composeStyleActions
   ) : (
     <div className="flex flex-wrap gap-2">
       <Button
@@ -588,7 +585,7 @@ export function PostForm({
     </Dialog>
   );
 
-  if (isCompose) {
+  if (showPreviewPanel) {
     return (
       <>
         <form
@@ -597,22 +594,14 @@ export function PostForm({
         >
           <div className="min-w-0 space-y-6">{formFields}</div>
 
-          <aside className="lg:sticky lg:top-4">
-            <div className="rounded-xl border bg-card p-4 shadow-lg">
-              <h2 className="mb-1 text-sm font-semibold">Prévia da publicação</h2>
-              <p className="mb-4 text-xs text-muted-foreground">
-                Visualização aproximada do feed
-              </p>
-              <PostSocialPreview
-                platforms={previewPlatforms}
-                caption={preview}
-                mediaPreviewUrl={mediaPreviewUrl}
-                mediaMimeType={mediaMimeType}
-                contentType={contentType}
-                accountLabel={accountLabel}
-              />
-            </div>
-          </aside>
+          <PostPreviewPanel
+            platforms={previewPlatforms}
+            caption={preview}
+            mediaPreviewUrl={mediaPreviewUrl}
+            mediaMimeType={mediaMimeType}
+            contentType={contentType}
+            accountLabel={accountLabel}
+          />
 
           <div className="lg:col-span-2">{actionButtons}</div>
         </form>

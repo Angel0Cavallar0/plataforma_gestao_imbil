@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CONTENT_TYPE_LABELS } from "@/lib/constants/marketing";
 import type { ContentType } from "@/types/marketing";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export type PreviewPlatform = {
   slug: string;
@@ -63,7 +66,7 @@ function InstagramPreview({
   mediaMimeType,
   contentType,
   accountLabel,
-}: Omit<Props, "platforms" | "ctaUrl">) {
+}: Omit<Props, "platforms">) {
   const lines = caption.trim().split("\n");
   const firstLine = lines[0] ?? "";
   const rest = lines.slice(1).join("\n");
@@ -144,6 +147,17 @@ function FacebookPreview({
   );
 }
 
+function PlatformPreviewCard({
+  platform,
+  ...props
+}: Props & { platform: PreviewPlatform }) {
+  return platform.slug === "instagram" ? (
+    <InstagramPreview {...props} />
+  ) : (
+    <FacebookPreview {...props} />
+  );
+}
+
 export function PostSocialPreview({
   platforms,
   caption,
@@ -152,6 +166,10 @@ export function PostSocialPreview({
   contentType,
   accountLabel,
 }: Props) {
+  const [slide, setSlide] = useState(0);
+  const carousel = platforms.length > 1;
+  const activeSlide = platforms.length === 0 ? 0 : Math.min(slide, platforms.length - 1);
+
   if (!platforms.length) {
     return (
       <p className="text-center text-sm text-muted-foreground">
@@ -160,35 +178,87 @@ export function PostSocialPreview({
     );
   }
 
+  const shared = {
+    caption,
+    mediaPreviewUrl,
+    mediaMimeType,
+    contentType,
+    accountLabel,
+  };
+
+  if (!carousel) {
+    const p = platforms[0];
+    return (
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{p.name}</p>
+        <PlatformPreviewCard platform={p} platforms={platforms} {...shared} />
+      </div>
+    );
+  }
+
+  const go = (delta: number) => {
+    setSlide((i) => (i + delta + platforms.length) % platforms.length);
+  };
+
   return (
-    <div
-      className={cn(
-        "space-y-4",
-        platforms.length > 1 && "max-h-[calc(100vh-8rem)] overflow-y-auto pr-1",
-      )}
-    >
-      {platforms.map((p) => (
-        <div key={p.slug}>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">{p.name}</p>
-          {p.slug === "instagram" ? (
-            <InstagramPreview
-              caption={caption}
-              mediaPreviewUrl={mediaPreviewUrl}
-              mediaMimeType={mediaMimeType}
-              contentType={contentType}
-              accountLabel={accountLabel}
-            />
-          ) : (
-            <FacebookPreview
-              caption={caption}
-              mediaPreviewUrl={mediaPreviewUrl}
-              mediaMimeType={mediaMimeType}
-              contentType={contentType}
-              accountLabel={accountLabel}
-            />
-          )}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          aria-label="Prévia anterior"
+          onClick={() => go(-1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <p className="min-w-0 flex-1 truncate text-center text-xs font-medium text-muted-foreground">
+          {platforms[activeSlide]?.name}
+          <span className="text-muted-foreground/70">
+            {" "}
+            · {activeSlide + 1}/{platforms.length}
+          </span>
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          aria-label="Próxima prévia"
+          onClick={() => go(1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-lg">
+        <div
+          className="flex transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+        >
+          {platforms.map((p) => (
+            <div key={p.slug} className="w-full shrink-0 px-0.5">
+              <PlatformPreviewCard platform={p} platforms={platforms} {...shared} />
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+
+      <div className="flex justify-center gap-1.5">
+        {platforms.map((p, i) => (
+          <button
+            key={p.slug}
+            type="button"
+            aria-label={`Ver prévia ${p.name}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all",
+              i === activeSlide ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/40",
+            )}
+            onClick={() => setSlide(i)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

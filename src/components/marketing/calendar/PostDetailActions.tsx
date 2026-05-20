@@ -13,15 +13,21 @@ import { formatCaption } from "@/lib/marketing/caption";
 import type { PostWithRelations } from "@/types/marketing";
 import { toast } from "sonner";
 
-export function PostDetailActions({ post }: { post: PostWithRelations }) {
+export function PostDetailActions({
+  post,
+  compact = false,
+}: {
+  post: PostWithRelations;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const preview = formatCaption(post.copy, post.hashtags);
 
   return (
-    <div className="space-y-4">
-      {preview ? (
+    <div className={compact ? "space-y-0" : "space-y-4"}>
+      {!compact && preview ? (
         <div className="rounded-md border p-3">
           <p className="mb-1 text-xs font-medium text-muted-foreground">
             Legenda publicada
