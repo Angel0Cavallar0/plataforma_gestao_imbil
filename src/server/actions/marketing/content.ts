@@ -81,6 +81,52 @@ export async function createPostAction(input: CreatePostInput) {
   return { data: post };
 }
 
+/** Cria um post por plataforma (mesmo conteúdo, contas distintas). */
+export async function createPostsBatchAction(input: {
+  posts: CreatePostInput[];
+  schedule: boolean;
+}) {
+  const session = await requireAuth();
+  await requireMarketingPermission(session.user.id, "create");
+
+  if (!input.posts.length) {
+    return { error: "Selecione ao menos uma rede social" };
+  }
+
+  const createdIds: string[] = [];
+  const errors: string[] = [];
+
+  for (const postInput of input.posts) {
+    const res = await createPostAction(postInput);
+    if (res.error) {
+      errors.push(typeof res.error === "string" ? res.error : "Erro ao criar post");
+      continue;
+    }
+    const id = res.data?.id as string;
+    if (!id) continue;
+    createdIds.push(id);
+
+    if (input.schedule) {
+      const sched = await schedulePostAction(id);
+      if (sched.error) {
+        errors.push(
+          typeof sched.error === "string" ? sched.error : `Falha ao agendar post ${id}`,
+        );
+      }
+    }
+  }
+
+  if (!createdIds.length) {
+    return { error: errors[0] ?? "Nenhum post foi criado" };
+  }
+
+  revalidateCalendar();
+  return {
+    data: { ids: createdIds, firstId: createdIds[0] },
+    partialErrors: errors.length ? errors : undefined,
+  };
+}
+
 export async function updatePostAction(input: UpdatePostInput) {
   const session = await requireAuth();
   await requireMarketingPermission(session.user.id, "update");

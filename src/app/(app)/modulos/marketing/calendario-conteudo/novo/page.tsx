@@ -18,7 +18,7 @@ export default async function NovoPostPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <Link
           href="/modulos/marketing/calendario-conteudo"
@@ -27,8 +27,13 @@ export default async function NovoPostPage() {
           ← Voltar ao calendário
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">Novo post</h1>
+        <p className="text-sm text-muted-foreground">
+          Preencha o conteúdo à esquerda e confira a prévia das redes à direita.
+        </p>
       </div>
       <PostForm
+        layout="compose"
+        cancelHref="/modulos/marketing/calendario-conteudo"
         platforms={socialPlatforms}
         campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
         credentials={credentials.map((c) => ({
