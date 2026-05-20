@@ -60,12 +60,21 @@ export type Database = {
         Relationships: [];
       };
       departments: {
-        Row: { created_at: string | null; id: string; name: string; parent_id: string | null };
+        Row: {
+          created_at: string | null;
+          id: string;
+          name: string;
+          parent_id: string | null;
+          responsible_id: string | null;
+          responsible_name: string | null;
+        };
         Insert: {
           created_at?: string | null;
           id?: string;
           name: string;
           parent_id?: string | null;
+          responsible_id?: string | null;
+          responsible_name?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["departments"]["Insert"]>;
         Relationships: [];
