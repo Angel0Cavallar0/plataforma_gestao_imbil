@@ -398,10 +398,8 @@ export async function addCommentAction(postId: string, body: string) {
   return { data };
 }
 
+/** Usado pela rota Next.js para testes manuais. Produção: Edge Function publish-scheduled-posts. */
 export async function processScheduledPostsAction() {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) throw new Error("CRON_SECRET não configurado");
-
   const admin = createAdminClient();
   const now = new Date().toISOString();
   const { data: posts } = await marketingSchema(admin)

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { processScheduledPostsAction } from "@/server/actions/marketing/content";
 
+/**
+ * Disparo manual / desenvolvimento da publicação agendada.
+ * Em produção o agendamento usa Supabase Edge Function + pg_cron (ver migration 009).
+ */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
@@ -11,7 +15,11 @@ export async function GET(request: Request) {
 
   try {
     const results = await processScheduledPostsAction();
-    return NextResponse.json({ processed: results.length, results });
+    return NextResponse.json({
+      source: "nextjs_api",
+      processed: results.length,
+      results,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Erro" },

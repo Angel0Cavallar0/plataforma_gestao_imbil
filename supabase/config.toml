@@ -1,0 +1,5 @@
+# Supabase local / deploy config
+# Docs: https://supabase.com/docs/guides/functions/schedule-functions
+
+[functions.publish-scheduled-posts]
+verify_jwt = false
