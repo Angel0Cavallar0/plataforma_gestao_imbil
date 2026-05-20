@@ -19,14 +19,13 @@ export const POST_STATUSES: PostStatus[] = [
   "cancelado",
 ];
 
+/** Tipos disponíveis ao criar/editar posts (texto e link descontinuados na UI). */
 export const CONTENT_TYPES: ContentType[] = [
   "imagem",
   "video",
   "carrossel",
   "reels",
   "story",
-  "texto",
-  "link",
 ];
 
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
@@ -85,7 +84,5 @@ export const ASSET_LIMITS: Record<
     imagem: { maxBytes: 4 * 1024 * 1024 },
     video: { maxBytes: 1024 * 1024 * 1024 },
     reels: { maxBytes: 1024 * 1024 * 1024, maxDurationSec: 90 },
-    texto: { maxBytes: 0 },
-    link: { maxBytes: 0 },
   },
 };

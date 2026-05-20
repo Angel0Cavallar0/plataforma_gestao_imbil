@@ -15,7 +15,6 @@ type Props = {
   mediaPreviewUrl: string | null;
   mediaMimeType?: string;
   contentType: ContentType;
-  ctaUrl?: string;
   accountLabel?: string;
 };
 
@@ -112,7 +111,6 @@ function FacebookPreview({
   mediaPreviewUrl,
   mediaMimeType,
   contentType,
-  ctaUrl,
   accountLabel,
 }: Omit<Props, "platforms">) {
   return (
@@ -136,22 +134,12 @@ function FacebookPreview({
         ) : (
           <p className="text-xs text-neutral-400">Texto da publicação…</p>
         )}
-        {ctaUrl && contentType === "link" && (
-          <div className="rounded-md border bg-neutral-50 p-2">
-            <p className="truncate text-[10px] font-medium uppercase text-neutral-500">
-              Link
-            </p>
-            <p className="truncate text-xs text-[#1877F2]">{ctaUrl}</p>
-          </div>
-        )}
       </div>
-      {contentType !== "texto" && contentType !== "link" && (
-        <MediaBlock
-          url={mediaPreviewUrl}
-          mimeType={mediaMimeType}
-          contentType={contentType}
-        />
-      )}
+      <MediaBlock
+        url={mediaPreviewUrl}
+        mimeType={mediaMimeType}
+        contentType={contentType}
+      />
     </div>
   );
 }
@@ -162,7 +150,6 @@ export function PostSocialPreview({
   mediaPreviewUrl,
   mediaMimeType,
   contentType,
-  ctaUrl,
   accountLabel,
 }: Props) {
   if (!platforms.length) {
@@ -197,7 +184,6 @@ export function PostSocialPreview({
               mediaPreviewUrl={mediaPreviewUrl}
               mediaMimeType={mediaMimeType}
               contentType={contentType}
-              ctaUrl={ctaUrl}
               accountLabel={accountLabel}
             />
           )}

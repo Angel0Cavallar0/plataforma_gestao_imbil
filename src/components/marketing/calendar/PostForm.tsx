@@ -28,7 +28,23 @@ import {
   uploadAssetAction,
 } from "@/server/actions/marketing/content";
 import { PostSocialPreview } from "@/components/marketing/calendar/PostSocialPreview";
+import type { CreatePostInput } from "@/lib/validations/marketing/content";
 import type { ContentType, Platform, PostWithRelations } from "@/types/marketing";
+
+type CreatableContentType = CreatePostInput["content_type"];
+
+function toCreatableContentType(value: ContentType | undefined): CreatableContentType {
+  if (
+    value === "imagem" ||
+    value === "video" ||
+    value === "carrossel" ||
+    value === "reels" ||
+    value === "story"
+  ) {
+    return value;
+  }
+  return "imagem";
+}
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -60,17 +76,14 @@ export function PostForm({
   const [selectedPlatformIds, setSelectedPlatformIds] = useState<string[]>(() =>
     platforms.map((p) => p.id),
   );
-  const [credentialByPlatform, setCredentialByPlatform] = useState<
-    Record<string, string>
-  >({});
-  const [contentType, setContentType] = useState<ContentType>(
-    post?.content_type ?? "imagem",
+  const [metaCredentialId, setMetaCredentialId] = useState(post?.credential_id ?? "");
+  const [contentType, setContentType] = useState<CreatableContentType>(
+    toCreatableContentType(post?.content_type),
   );
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
   const [mediaMimeType, setMediaMimeType] = useState<string | undefined>();
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
-  const [ctaUrl, setCtaUrl] = useState(post?.cta_url ?? "");
 
   const hashtags = useMemo(
     () =>
@@ -101,22 +114,37 @@ export function PostForm({
     [isCompose, selectedPlatforms, platform],
   );
 
+  const instagramPlatformId = useMemo(
+    () => platforms.find((p) => p.slug === "instagram")?.id,
+    [platforms],
+  );
+
+  /** Credenciais Meta (cadastradas no módulo Instagram; IDs servem IG + Facebook). */
+  const metaCredentials = useMemo(() => {
+    if (instagramPlatformId) {
+      return credentials.filter((c) => c.platform_id === instagramPlatformId);
+    }
+    return credentials;
+  }, [credentials, instagramPlatformId]);
+
+  const contentTypeOptions = useMemo(() => {
+    const types = [...CONTENT_TYPES];
+    if (
+      post?.content_type &&
+      (post.content_type === "texto" || post.content_type === "link") &&
+      !types.includes(post.content_type)
+    ) {
+      types.push(post.content_type);
+    }
+    return types;
+  }, [post]);
+
   const accountLabel = useMemo(() => {
-    if (isCompose && selectedPlatforms.length === 1) {
-      const credId = credentialByPlatform[selectedPlatforms[0].id];
-      return credentials.find((c) => c.id === credId)?.label;
-    }
-    if (!isCompose && post?.credential_id) {
-      return credentials.find((c) => c.id === post.credential_id)?.label;
-    }
-    return undefined;
-  }, [isCompose, selectedPlatforms, credentialByPlatform, credentials, post]);
-
-  const filteredCredentials = credentials.filter((c) => c.platform_id === platformId);
-
-  const showFacebookFields = isCompose
-    ? selectedPlatforms.some((p) => p.slug === "facebook")
-    : platform?.slug === "facebook";
+    const credId = isCompose
+      ? metaCredentialId
+      : (post?.credential_id ?? metaCredentialId);
+    return credentials.find((c) => c.id === credId)?.label;
+  }, [isCompose, metaCredentialId, credentials, post?.credential_id]);
 
   useEffect(() => {
     return () => {
@@ -149,7 +177,7 @@ export function PostForm({
       content_type: contentType,
       copy: copy || undefined,
       hashtags,
-      cta_url: ctaUrl || "",
+      cta_url: "",
       scheduled_at: new Date(String(form.get("scheduled_at"))),
       assigned_to: null,
     };
@@ -157,8 +185,8 @@ export function PostForm({
 
   function buildPayload(form: FormData, targetPlatformId: string) {
     const credId = isCompose
-      ? credentialByPlatform[targetPlatformId]
-      : String(form.get("credential_id") || "");
+      ? metaCredentialId
+      : metaCredentialId || String(form.get("credential_id") || "");
     return {
       ...buildSharedPayload(form),
       platform_id: targetPlatformId,
@@ -328,10 +356,10 @@ export function PostForm({
             value={contentType}
             onChange={(e) => {
               markDirty();
-              setContentType(e.target.value as ContentType);
+              setContentType(e.target.value as CreatableContentType);
             }}
           >
-            {CONTENT_TYPES.map((t) => (
+            {contentTypeOptions.map((t) => (
               <option key={t} value={t}>
                 {CONTENT_TYPE_LABELS[t]}
               </option>
@@ -339,52 +367,31 @@ export function PostForm({
           </Select>
         </div>
 
-        {isCompose ? (
-          <div className="space-y-3 sm:col-span-2">
-            {selectedPlatforms.map((p) => {
-              const creds = credentials.filter((c) => c.platform_id === p.id);
-              return (
-                <div key={p.id} className="space-y-2">
-                  <Label htmlFor={`credential_${p.id}`}>Conta Meta — {p.name}</Label>
-                  <Select
-                    id={`credential_${p.id}`}
-                    value={credentialByPlatform[p.id] ?? ""}
-                    onChange={(e) => {
-                      markDirty();
-                      setCredentialByPlatform((prev) => ({
-                        ...prev,
-                        [p.id]: e.target.value,
-                      }));
-                    }}
-                  >
-                    <option value="">Selecione…</option>
-                    {creds.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor="credential_id">Conta Meta</Label>
-            <Select
-              id="credential_id"
-              name="credential_id"
-              defaultValue={post?.credential_id ?? ""}
-            >
-              <option value="">Selecione…</option>
-              {filteredCredentials.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="meta_credential_id">Conta Meta (Instagram e Facebook)</Label>
+          <Select
+            id="meta_credential_id"
+            name="credential_id"
+            value={metaCredentialId}
+            onChange={(e) => {
+              markDirty();
+              setMetaCredentialId(e.target.value);
+            }}
+          >
+            <option value="">Selecione…</option>
+            {metaCredentials.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          {isCompose && selectedPlatforms.some((p) => p.slug === "facebook") && (
+            <p className="text-xs text-muted-foreground">
+              A mesma conta e os mesmos IDs (Page ID, Instagram User ID) serão usados nas
+              redes selecionadas.
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="campaign_id">Campanha (opcional)</Label>
@@ -418,22 +425,6 @@ export function PostForm({
             onChange={markDirty}
           />
         </div>
-
-        {(contentType === "link" || showFacebookFields) && (
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="cta_url">URL do link (Facebook)</Label>
-            <Input
-              id="cta_url"
-              name="cta_url"
-              type="url"
-              value={ctaUrl}
-              onChange={(e) => {
-                markDirty();
-                setCtaUrl(e.target.value);
-              }}
-            />
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
@@ -490,27 +481,25 @@ export function PostForm({
         </div>
       )}
 
-      {contentType !== "texto" && (
-        <div className="space-y-2">
-          <Label htmlFor="file">Mídia</Label>
-          <Input
-            id="file"
-            name="file"
-            type="file"
-            accept="image/jpeg,image/png,video/mp4,video/quicktime"
-            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-          />
-          {post?.assets?.length ? (
-            <ul className="text-xs text-muted-foreground">
-              {post.assets.map((a) => (
-                <li key={a.id}>
-                  {a.file_name} ({a.asset_type})
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      )}
+      <div className="space-y-2">
+        <Label htmlFor="file">Mídia</Label>
+        <Input
+          id="file"
+          name="file"
+          type="file"
+          accept="image/jpeg,image/png,video/mp4,video/quicktime"
+          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+        />
+        {post?.assets?.length ? (
+          <ul className="text-xs text-muted-foreground">
+            {post.assets.map((a) => (
+              <li key={a.id}>
+                {a.file_name} ({a.asset_type})
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </>
   );
 
@@ -620,7 +609,6 @@ export function PostForm({
                 mediaPreviewUrl={mediaPreviewUrl}
                 mediaMimeType={mediaMimeType}
                 contentType={contentType}
-                ctaUrl={ctaUrl}
                 accountLabel={accountLabel}
               />
             </div>

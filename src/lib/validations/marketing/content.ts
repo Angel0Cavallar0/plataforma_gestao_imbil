@@ -3,14 +3,13 @@ import { COPY_MAX_LENGTH, ASSET_LIMITS } from "@/lib/constants/marketing";
 import { captionLength, isCaptionWithinLimit } from "@/lib/marketing/caption";
 import type { ContentType } from "@/types/marketing";
 
-export const contentTypeEnum = z.enum([
+/** Tipos permitidos em novos posts e ao alterar tipo na UI. */
+export const creatableContentTypeEnum = z.enum([
   "imagem",
   "video",
   "carrossel",
   "reels",
   "story",
-  "texto",
-  "link",
 ]);
 
 export const postStatusEnum = z.enum([
@@ -32,7 +31,7 @@ const postFieldsSchema = z.object({
   platform_id: z.string().uuid(),
   credential_id: z.string().uuid().optional(),
   title: z.string().min(3).max(200),
-  content_type: contentTypeEnum,
+  content_type: creatableContentTypeEnum,
   copy: z.string().max(COPY_MAX_LENGTH).optional(),
   hashtags: hashtagsSchema,
   cta_url: z.union([z.string().url(), z.literal("")]).optional(),
