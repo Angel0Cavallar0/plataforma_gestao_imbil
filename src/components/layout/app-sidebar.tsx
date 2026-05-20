@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, LayoutDashboard, Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MARKETING_SUBMODULES } from "@/lib/constants/marketing";
 import { SidebarUserFooter } from "@/components/layout/sidebar-user-footer";
 import type { NavPermissions, UserProfile } from "@/types/auth";
 
@@ -65,15 +66,34 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
                 <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
               </summary>
               <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-2">
-                <Link
-                  href={`/modulos/${mod.slug}`}
-                  className="block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                >
-                  Visão geral
-                </Link>
-                <span className="block px-2 py-1 text-xs text-sidebar-foreground/40">
-                  Sub-serviços — em breve
-                </span>
+                {mod.slug === "marketing" ? (
+                  MARKETING_SUBMODULES.map((sub) => (
+                    <Link
+                      key={sub.slug}
+                      href={sub.href}
+                      className={cn(
+                        "block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                        pathname === sub.href || pathname.startsWith(sub.href + "/")
+                          ? "bg-sidebar-accent/50 text-sidebar-foreground"
+                          : "",
+                      )}
+                    >
+                      {sub.name}
+                    </Link>
+                  ))
+                ) : (
+                  <>
+                    <Link
+                      href={`/modulos/${mod.slug}`}
+                      className="block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                    >
+                      Visão geral
+                    </Link>
+                    <span className="block px-2 py-1 text-xs text-sidebar-foreground/40">
+                      Sub-serviços — em breve
+                    </span>
+                  </>
+                )}
               </div>
             </details>
           ))}
