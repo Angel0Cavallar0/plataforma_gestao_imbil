@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getNavPermissions, requireAuth } from "@/lib/auth/session";
 import { UsersTable, type UserRow } from "@/components/users/users-table";
-import { CreateUserForm } from "@/components/users/create-user-form";
+import { CreateUserDialog } from "@/components/users/create-user-dialog";
 
 export default async function UsuariosPage() {
   const session = await requireAuth();
@@ -40,13 +40,19 @@ export default async function UsuariosPage() {
       };
     }) ?? [];
 
-  const { data: roles } = await supabase.from("roles").select("id, name, slug").order("hierarchy_level", { ascending: false });
-  const { data: modules } = await supabase.from("modules").select("id, name").order("display_order");
+  const { data: roles } = await supabase
+    .from("roles")
+    .select("id, name, slug")
+    .order("hierarchy_level", { ascending: false });
+  const { data: modules } = await supabase
+    .from("modules")
+    .select("id, name")
+    .order("display_order");
 
   return (
     <div className="space-y-6">
       {nav.canManageUsers && (
-        <CreateUserForm roles={roles ?? []} modules={modules ?? []} />
+        <CreateUserDialog roles={roles ?? []} modules={modules ?? []} />
       )}
       <UsersTable users={users} nav={nav} />
     </div>

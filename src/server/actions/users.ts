@@ -2,11 +2,13 @@
 
 import { requireAuth } from "@/lib/auth/session";
 import {
+  canAccessConfig,
   canManageUsers,
   canUnlockOrResetPassword,
   isSuperadmin,
 } from "@/lib/auth/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { logAction } from "@/lib/auth/audit";
 import {
   logAuthEmail,
@@ -295,4 +297,159 @@ export async function deleteUserAction(userId: string, confirmEmail: string) {
 
   revalidatePath("/configuracoes/usuarios");
   return { success: true };
+}
+
+export interface UserDetailData {
+  id: string;
+  full_name: string;
+  email: string;
+  registration_number: string;
+  phone: string | null;
+  whatsapp: string | null;
+  status: string;
+  last_login_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  admission_date: string | null;
+  must_change_password: boolean | null;
+  password_changed_at: string | null;
+  deactivated_at: string | null;
+  role_name: string;
+  role_slug: string;
+  department_name: string | null;
+  position_name: string | null;
+  manager_name: string | null;
+  module_names: string[];
+  last_email_status: string | null;
+  last_email_at: string | null;
+}
+
+export interface UserAuditLogRow {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  created_at: string | null;
+  ip_address: string | null;
+}
+
+export async function getUserDetailAction(userId: string) {
+  const session = await requireAuth();
+  if (!canAccessConfig(session.profile)) {
+    return { error: "Sem permissão." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select(
+      `
+      id, full_name, email, registration_number, phone, whatsapp,
+      status, last_login_at, created_at, updated_at, admission_date,
+      must_change_password, password_changed_at, deactivated_at,
+      roles(name, slug),
+      departments(name),
+      positions(name),
+      manager:profiles!profiles_manager_id_fkey(full_name),
+      user_module_access(modules(name))
+    `,
+    )
+    .eq("id", userId)
+    .single();
+
+  if (error || !profile) {
+    return { error: "Usuário não encontrado." };
+  }
+
+  const { data: emailLogs } = await supabase
+    .from("email_logs")
+    .select("status, created_at")
+    .eq("related_user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const roleRaw = profile.roles as
+    | { name: string; slug: string }
+    | { name: string; slug: string }[]
+    | null;
+  const role = Array.isArray(roleRaw) ? roleRaw[0] : roleRaw;
+
+  const departmentRaw = profile.departments as
+    | { name: string }
+    | { name: string }[]
+    | null;
+  const department = Array.isArray(departmentRaw) ? departmentRaw[0] : departmentRaw;
+
+  const positionRaw = profile.positions as { name: string } | { name: string }[] | null;
+  const position = Array.isArray(positionRaw) ? positionRaw[0] : positionRaw;
+
+  const managerRaw = profile.manager as
+    | { full_name: string }
+    | { full_name: string }[]
+    | null;
+  const manager = Array.isArray(managerRaw) ? managerRaw[0] : managerRaw;
+  const moduleAccess = (profile.user_module_access ?? []) as {
+    modules: { name: string } | { name: string }[] | null;
+  }[];
+
+  const moduleNames = moduleAccess
+    .map((entry) => {
+      const mod = entry.modules;
+      if (!mod) return null;
+      if (Array.isArray(mod)) return mod[0]?.name ?? null;
+      return mod.name;
+    })
+    .filter((name): name is string => Boolean(name));
+
+  const lastEmail = emailLogs?.[0];
+
+  const data: UserDetailData = {
+    id: profile.id,
+    full_name: profile.full_name,
+    email: profile.email,
+    registration_number: profile.registration_number,
+    phone: profile.phone,
+    whatsapp: profile.whatsapp,
+    status: profile.status,
+    last_login_at: profile.last_login_at,
+    created_at: profile.created_at,
+    updated_at: profile.updated_at,
+    admission_date: profile.admission_date,
+    must_change_password: profile.must_change_password,
+    password_changed_at: profile.password_changed_at,
+    deactivated_at: profile.deactivated_at,
+    role_name: role?.name ?? "—",
+    role_slug: role?.slug ?? "—",
+    department_name: department?.name ?? null,
+    position_name: position?.name ?? null,
+    manager_name: manager?.full_name ?? null,
+    module_names: moduleNames,
+    last_email_status: lastEmail?.status ?? null,
+    last_email_at: lastEmail?.created_at ?? null,
+  };
+
+  return { data };
+}
+
+export async function getUserAuditLogsAction(userId: string, limit = 30) {
+  const session = await requireAuth();
+  if (!canAccessConfig(session.profile)) {
+    return { error: "Sem permissão." };
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("id, action, resource_type, resource_id, created_at, ip_address")
+    .or(`user_id.eq.${userId},and(resource_type.eq.profile,resource_id.eq.${userId})`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { data: (data ?? []) as UserAuditLogRow[] };
 }
