@@ -6,7 +6,7 @@ import { setPasswordFromSessionAction } from "@/server/actions/auth";
 import { isPasswordValid } from "@/lib/auth/password-requirements";
 import { PasswordRequirementsChecklist } from "@/components/auth/password-requirements-checklist";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -59,10 +59,9 @@ export function PasswordForm({ type }: PasswordFormProps) {
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="password">Nova senha</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               required
               autoComplete="new-password"
               value={password}
@@ -77,10 +76,9 @@ export function PasswordForm({ type }: PasswordFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <Input
+            <PasswordInput
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
               required
               autoComplete="new-password"
               value={confirmPassword}
