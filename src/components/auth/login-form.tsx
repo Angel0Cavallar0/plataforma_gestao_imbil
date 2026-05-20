@@ -7,6 +7,7 @@ import { loginAction } from "@/server/actions/auth";
 import { LoginSubmitButton } from "@/components/auth/login-submit-button";
 import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -71,10 +72,9 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               required
               autoComplete="current-password"
               disabled={isSubmitting}
