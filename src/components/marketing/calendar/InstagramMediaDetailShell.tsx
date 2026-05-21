@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { InstagramPublishedPreview } from "@/components/marketing/calendar/InstagramPublishedPreview";
 import { InstagramCommentsPanel } from "@/components/marketing/calendar/InstagramCommentsPanel";
 import { InstagramInsightsPanel } from "@/components/marketing/calendar/InstagramInsightsPanel";
-import { truncateCaption } from "@/lib/marketing/instagram-insights";
+import { hasBoostedHistory, truncateCaption } from "@/lib/marketing/instagram-insights";
 import type { InstagramCarouselChild, InstagramMediaInsightRow } from "@/types/marketing";
 
 type Props = {
@@ -25,6 +25,7 @@ export function InstagramMediaDetailShell({
   const publishedLabel = latest.published_at
     ? new Date(latest.published_at).toLocaleString("pt-BR")
     : null;
+  const hasPaidMedia = hasBoostedHistory(history);
 
   return (
     <div className="w-full max-w-none space-y-6">
@@ -40,6 +41,11 @@ export function InstagramMediaDetailShell({
           <span className="rounded-full bg-emerald-800 px-2.5 py-0.5 text-xs font-medium text-white">
             Publicado no Instagram
           </span>
+          {hasPaidMedia && (
+            <span className="rounded-full bg-amber-600 px-2.5 py-0.5 text-xs font-medium text-white">
+              Mídia paga
+            </span>
+          )}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {latest.media_type}

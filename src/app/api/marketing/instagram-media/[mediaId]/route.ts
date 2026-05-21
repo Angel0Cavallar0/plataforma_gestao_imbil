@@ -1,9 +1,38 @@
 import { getSession } from "@/lib/auth/session";
 import { requireMarketingPermission } from "@/lib/auth/marketing";
-import { getInstagramMediaLatest } from "@/server/queries/marketing/instagram-insights";
+import {
+  getInstagramCarouselChildById,
+  getInstagramMediaLatest,
+} from "@/server/queries/marketing/instagram-insights";
+
+async function proxyMediaUrl(mediaUrl: string, fallbackType: string) {
+  const upstream = await fetch(mediaUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; ImbilGestao/1.0; +https://imbil.com.br)",
+      Accept: "video/*,image/*,*/*",
+    },
+    cache: "no-store",
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    return null;
+  }
+
+  const contentType =
+    upstream.headers.get("content-type") ??
+    (fallbackType === "VIDEO" || fallbackType === "REELS" ? "video/mp4" : "image/jpeg");
+
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "private, max-age=300",
+    },
+  });
+}
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ mediaId: string }> },
 ) {
   const session = await getSession();
@@ -19,33 +48,32 @@ export async function GET(
 
   const { mediaId } = await context.params;
   const decodedId = decodeURIComponent(mediaId);
-  const latest = await getInstagramMediaLatest(decodedId);
+  const childId = new URL(request.url).searchParams.get("child");
 
-  if (!latest?.media_url) {
+  let mediaUrl: string | null = null;
+  let mediaType = "IMAGE";
+
+  if (childId) {
+    const child = await getInstagramCarouselChildById(childId);
+    mediaUrl = child?.media_url ?? child?.thumbnail_url ?? null;
+    mediaType = child?.media_type ?? "IMAGE";
+  } else {
+    const latest = await getInstagramMediaLatest(decodedId);
+    if (!latest) {
+      return new Response("Mídia não encontrada", { status: 404 });
+    }
+    mediaUrl = latest.media_url ?? latest.thumbnail_url ?? null;
+    mediaType = latest.media_type;
+  }
+
+  if (!mediaUrl) {
     return new Response("Mídia não encontrada", { status: 404 });
   }
 
-  const upstream = await fetch(latest.media_url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; ImbilGestao/1.0; +https://imbil.com.br)",
-      Accept: "video/*,image/*,*/*",
-    },
-    cache: "no-store",
-  });
-
-  if (!upstream.ok || !upstream.body) {
+  const response = await proxyMediaUrl(mediaUrl, mediaType);
+  if (!response) {
     return new Response("Falha ao obter mídia do Instagram", { status: 502 });
   }
 
-  const contentType =
-    upstream.headers.get("content-type") ??
-    (latest.media_type === "VIDEO" ? "video/mp4" : "image/jpeg");
-
-  return new Response(upstream.body, {
-    status: 200,
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "private, max-age=300",
-    },
-  });
+  return response;
 }

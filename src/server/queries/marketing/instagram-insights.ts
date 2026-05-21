@@ -80,6 +80,20 @@ export async function getInstagramMediaLatest(
   return (data as InstagramMediaInsightRow | null) ?? null;
 }
 
+export async function getInstagramCarouselChildById(
+  childMediaId: string,
+): Promise<InstagramCarouselChild | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_carousel_children")
+    .select("*")
+    .eq("child_media_id", childMediaId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as InstagramCarouselChild | null) ?? null;
+}
+
 export async function getInstagramCarouselChildren(
   parentMediaId: string,
 ): Promise<InstagramCarouselChild[]> {

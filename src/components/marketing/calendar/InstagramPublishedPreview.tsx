@@ -8,8 +8,10 @@ import { cn } from "@/lib/utils";
 
 const ACCOUNT_LABEL = "imbil";
 
-function instagramMediaProxyUrl(mediaId: string): string {
-  return `/api/marketing/instagram-media/${encodeURIComponent(mediaId)}`;
+function instagramMediaProxyUrl(mediaId: string, childId?: string) {
+  const base = `/api/marketing/instagram-media/${encodeURIComponent(mediaId)}`;
+  if (childId) return `${base}?child=${encodeURIComponent(childId)}`;
+  return base;
 }
 
 function isVideoType(type: string, productType: string | null) {
@@ -18,15 +20,23 @@ function isVideoType(type: string, productType: string | null) {
   return t === "VIDEO" || t === "REELS" || p === "REELS" || p === "VIDEO";
 }
 
+function isCarouselType(type: string, productType: string | null) {
+  const t = type.toUpperCase();
+  const p = productType?.toUpperCase() ?? "";
+  return t === "CAROUSEL" || t === "CAROUSEL_ALBUM" || p === "CAROUSEL";
+}
+
 function InstagramVideoFrame({
   mediaId,
+  childId,
   posterUrl,
 }: {
   mediaId: string;
+  childId?: string;
   posterUrl: string | null;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = instagramMediaProxyUrl(mediaId);
+  const src = instagramMediaProxyUrl(mediaId, childId);
 
   if (failed) {
     return (
@@ -60,8 +70,15 @@ function InstagramVideoFrame({
   );
 }
 
-function InstagramImageFrame({ src, alt = "" }: { src: string; alt?: string }) {
+function InstagramImageFrame({
+  mediaId,
+  childId,
+}: {
+  mediaId: string;
+  childId?: string;
+}) {
   const [failed, setFailed] = useState(false);
+  const src = instagramMediaProxyUrl(mediaId, childId);
 
   if (failed) {
     return (
@@ -75,8 +92,9 @@ function InstagramImageFrame({ src, alt = "" }: { src: string; alt?: string }) {
     <div className="aspect-[4/5] w-full bg-neutral-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        key={src}
         src={src}
-        alt={alt}
+        alt=""
         className="h-full w-full object-cover"
         onError={() => setFailed(true)}
       />
@@ -94,7 +112,9 @@ export function InstagramPublishedPreview({
   carouselItems: InstagramCarouselChild[];
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const isCarousel = carouselItems.length > 0;
+  const hasCarouselChildren = carouselItems.length > 0;
+  const isCarousel =
+    hasCarouselChildren || isCarouselType(latest.media_type, latest.media_product_type);
   const isVideo = isVideoType(latest.media_type, latest.media_product_type);
 
   const caption = latest.caption ?? "";
@@ -103,47 +123,38 @@ export function InstagramPublishedPreview({
   const rest = lines.slice(1).join("\n");
 
   function prev() {
-    if (!isCarousel) return;
+    if (!hasCarouselChildren) return;
     setActiveIndex((i) => (i <= 0 ? carouselItems.length - 1 : i - 1));
   }
 
   function next() {
-    if (!isCarousel) return;
+    if (!hasCarouselChildren) return;
     setActiveIndex((i) => (i >= carouselItems.length - 1 ? 0 : i + 1));
   }
 
   function renderMedia() {
-    if (isCarousel) {
+    if (hasCarouselChildren) {
       const child = carouselItems[activeIndex];
       if (!child) return null;
+      const childId = child.child_media_id;
       const childIsVideo = isVideoType(child.media_type, latest.media_product_type);
       if (childIsVideo) {
-        return <InstagramVideoFrame mediaId={mediaId} posterUrl={child.thumbnail_url} />;
-      }
-      const imgSrc = child.media_url ?? child.thumbnail_url;
-      if (!imgSrc) {
         return (
-          <div className="flex aspect-[4/5] items-center justify-center text-sm text-neutral-500">
-            Mídia indisponível
-          </div>
+          <InstagramVideoFrame
+            mediaId={mediaId}
+            childId={childId}
+            posterUrl={child.thumbnail_url}
+          />
         );
       }
-      return <InstagramImageFrame src={imgSrc} />;
+      return <InstagramImageFrame mediaId={mediaId} childId={childId} />;
     }
 
     if (isVideo) {
       return <InstagramVideoFrame mediaId={mediaId} posterUrl={latest.thumbnail_url} />;
     }
 
-    const imgSrc = latest.media_url ?? latest.thumbnail_url;
-    if (!imgSrc) {
-      return (
-        <div className="flex aspect-[4/5] items-center justify-center text-sm text-neutral-500">
-          Mídia indisponível
-        </div>
-      );
-    }
-    return <InstagramImageFrame src={imgSrc} />;
+    return <InstagramImageFrame mediaId={mediaId} />;
   }
 
   return (
@@ -157,14 +168,18 @@ export function InstagramPublishedPreview({
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold">{ACCOUNT_LABEL}</p>
           <p className="text-[10px] text-neutral-500">
-            {latest.media_product_type === "REELS" ? "Reels" : "Publicação"}
+            {isCarousel
+              ? "Carrossel"
+              : latest.media_product_type === "REELS"
+                ? "Reels"
+                : "Publicação"}
           </p>
         </div>
       </div>
 
       <div className="relative">
         {renderMedia()}
-        {isCarousel && carouselItems.length > 1 && (
+        {hasCarouselChildren && carouselItems.length > 1 && (
           <>
             <Button
               type="button"

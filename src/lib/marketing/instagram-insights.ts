@@ -14,7 +14,28 @@ export const ORGANIC_METRICS = [
   "plays",
 ] as const;
 
+/** Métricas orgânicas exibidas em cards simples (alcance/impressões são unificados). */
+export const ORGANIC_METRICS_SIMPLE = [
+  "likes",
+  "comments",
+  "saves",
+  "shares",
+  "plays",
+] as const;
+
 export const PAID_METRICS = ["ad_spend", "ad_impressions", "ad_reach"] as const;
+
+export const UNIFIED_METRIC_PAIRS = [
+  { title: "Alcance", organicKey: "reach" as const, paidKey: "ad_reach" as const },
+  {
+    title: "Impressões",
+    organicKey: "impressions" as const,
+    paidKey: "ad_impressions" as const,
+  },
+] as const;
+
+export const ORGANIC_LINE_COLOR = "#3b82f6";
+export const PAID_LINE_COLOR = "#f97316";
 
 export type OrganicMetricKey = (typeof ORGANIC_METRICS)[number];
 export type PaidMetricKey = (typeof PAID_METRICS)[number];
@@ -117,5 +138,21 @@ export function chartDataForMetric(
       month: "short",
     }),
     value: Number(row[key] ?? 0),
+  }));
+}
+
+export function chartDataUnifiedOrganicPaid(
+  history: InstagramMediaInsightRow[],
+  organicKey: "reach" | "impressions",
+  paidKey: "ad_reach" | "ad_impressions",
+) {
+  return history.map((row) => ({
+    date: row.data_referencia,
+    label: new Date(`${row.data_referencia}T12:00:00`).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+    }),
+    organic: Number(row[organicKey] ?? 0),
+    paid: Number(row[paidKey] ?? 0),
   }));
 }

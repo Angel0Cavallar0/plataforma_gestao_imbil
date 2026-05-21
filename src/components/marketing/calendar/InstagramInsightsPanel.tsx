@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import {
   filterInsightHistory,
   hasBoostedHistory,
-  ORGANIC_METRICS,
-  PAID_METRICS,
   type InsightPeriod,
 } from "@/lib/marketing/instagram-insights";
 import type { InstagramMediaInsightRow } from "@/types/marketing";
@@ -33,12 +31,7 @@ export function InstagramInsightsPanel({
         </p>
       </div>
       <InsightPeriodFilter value={period} onChange={setPeriod} />
-      <InsightMetricGrid
-        history={filtered}
-        organicKeys={ORGANIC_METRICS}
-        paidKeys={PAID_METRICS}
-        showPaid={showPaid}
-      />
+      <InsightMetricGrid history={filtered} showPaid={showPaid} />
     </div>
   );
 }
