@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { InstagramMediaPreview } from "@/components/marketing/calendar/InstagramMediaPreview";
+import { InstagramPublishedPreview } from "@/components/marketing/calendar/InstagramPublishedPreview";
 import { InstagramCommentsPanel } from "@/components/marketing/calendar/InstagramCommentsPanel";
 import { InstagramInsightsPanel } from "@/components/marketing/calendar/InstagramInsightsPanel";
 import { truncateCaption } from "@/lib/marketing/instagram-insights";
@@ -47,13 +47,7 @@ export function InstagramMediaDetailShell({ mediaId, history, carouselChildren }
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-6">
-          <InstagramMediaPreview latest={latest} carouselItems={carouselChildren} />
-          {latest.caption && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Legenda</h3>
-              <p className="whitespace-pre-wrap text-sm">{latest.caption}</p>
-            </div>
-          )}
+          <InstagramPublishedPreview latest={latest} carouselItems={carouselChildren} />
           {latest.permalink && (
             <a
               href={latest.permalink}

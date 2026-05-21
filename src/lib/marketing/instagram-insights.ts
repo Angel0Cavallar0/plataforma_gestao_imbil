@@ -97,34 +97,25 @@ export function filterInsightHistory(
   );
 }
 
-export function metricDelta(
+export function metricValue(
   history: InstagramMediaInsightRow[],
   key: OrganicMetricKey | PaidMetricKey,
-): { current: number; delta: number | null } {
-  if (history.length === 0) return { current: 0, delta: null };
+): number {
+  if (history.length === 0) return 0;
   const last = history[history.length - 1]!;
-  const prev = history.length > 1 ? history[history.length - 2]! : null;
-  const current = Number(last[key] ?? 0);
-  if (!prev) return { current, delta: null };
-  const previous = Number(prev[key] ?? 0);
-  return { current, delta: current - previous };
+  return Number(last[key] ?? 0);
 }
 
-export function chartDataFromHistory(
+export function chartDataForMetric(
   history: InstagramMediaInsightRow[],
-  keys: readonly (OrganicMetricKey | PaidMetricKey)[],
+  key: OrganicMetricKey | PaidMetricKey,
 ) {
-  return history.map((row) => {
-    const point: Record<string, string | number> = {
-      date: row.data_referencia,
-      label: new Date(`${row.data_referencia}T12:00:00`).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "short",
-      }),
-    };
-    for (const key of keys) {
-      point[key] = Number(row[key] ?? 0);
-    }
-    return point;
-  });
+  return history.map((row) => ({
+    date: row.data_referencia,
+    label: new Date(`${row.data_referencia}T12:00:00`).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+    }),
+    value: Number(row[key] ?? 0),
+  }));
 }

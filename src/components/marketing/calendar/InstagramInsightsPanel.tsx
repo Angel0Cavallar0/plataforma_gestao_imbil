@@ -11,7 +11,6 @@ import {
 import type { InstagramMediaInsightRow } from "@/types/marketing";
 import { InsightPeriodFilter } from "@/components/marketing/calendar/InsightPeriodFilter";
 import { InsightMetricGrid } from "@/components/marketing/calendar/InsightMetricGrid";
-import { InsightCharts } from "@/components/marketing/calendar/InsightCharts";
 
 export function InstagramInsightsPanel({
   fullHistory,
@@ -35,12 +34,6 @@ export function InstagramInsightsPanel({
       </div>
       <InsightPeriodFilter value={period} onChange={setPeriod} />
       <InsightMetricGrid
-        history={filtered}
-        organicKeys={ORGANIC_METRICS}
-        paidKeys={PAID_METRICS}
-        showPaid={showPaid}
-      />
-      <InsightCharts
         history={filtered}
         organicKeys={ORGANIC_METRICS}
         paidKeys={PAID_METRICS}
