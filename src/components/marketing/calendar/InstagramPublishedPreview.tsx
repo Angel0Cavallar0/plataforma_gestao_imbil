@@ -51,7 +51,6 @@ function InstagramMediaFrame({
           controls
           playsInline
           preload="metadata"
-          referrerPolicy="no-referrer"
           onError={() => setVideoFailed(true)}
         />
       </div>
