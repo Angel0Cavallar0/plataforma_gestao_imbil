@@ -45,7 +45,7 @@ export async function getPostsForCalendar(filters?: {
   let q = marketingSchema(supabase)
     .from("content_posts")
     .select(
-      "id, title, scheduled_at, status, campaign:content_campaigns(color), platform:platforms(slug, name, color)",
+      "id, title, scheduled_at, status, external_post_id, campaign:content_campaigns(color), platform:platforms(slug, name, color)",
     );
 
   if (filters?.from) q = q.gte("scheduled_at", filters.from);
@@ -74,10 +74,12 @@ export async function getPostsForCalendar(filters?: {
       title: row.title as string,
       start: row.scheduled_at as string,
       status: row.status as CalendarPostEvent["status"],
+      eventSource: "content_post" as const,
       platformSlug: platform?.slug ?? "",
       platformName: platform?.name ?? "",
       platformColor: platform?.color ?? null,
       campaignColor: campaign?.color ?? null,
+      externalPostId: (row.external_post_id as string | null) ?? null,
     };
   });
 }

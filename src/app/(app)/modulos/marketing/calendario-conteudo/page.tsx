@@ -3,10 +3,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ContentCalendar } from "@/components/marketing/calendar/ContentCalendar";
 import { ContentKpiCards } from "@/components/marketing/calendar/ContentKpiCards";
-import { getContentKpis, getPostsForCalendar } from "@/server/queries/marketing/content";
+import { getContentKpis } from "@/server/queries/marketing/content";
+import { getCalendarEvents } from "@/server/queries/marketing/calendar";
 
 export default async function CalendarioConteudoPage() {
-  const [kpis, events] = await Promise.all([getContentKpis(), getPostsForCalendar()]);
+  const [kpis, events] = await Promise.all([getContentKpis(), getCalendarEvents()]);
 
   return (
     <div className="space-y-6">

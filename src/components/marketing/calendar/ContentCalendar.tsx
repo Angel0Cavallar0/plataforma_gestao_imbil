@@ -13,12 +13,27 @@ import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   rascunho: "#9ca3af",
-  agendado: "#3b82f6",
+  agendado: "#1d4ed8",
   publicando: "#a855f7",
   publicado: "#22c55e",
   falhou: "#ef4444",
   cancelado: "#6b7280",
+  instagram_publicado: "#166534",
 };
+
+function eventBackgroundColor(e: CalendarPostEvent): string {
+  if (e.eventSource === "instagram_media") return statusColors.instagram_publicado;
+  if (e.campaignColor) return e.campaignColor;
+  return statusColors[e.status] ?? statusColors.rascunho;
+}
+
+function eventClassNames(e: CalendarPostEvent): string[] {
+  const classes: string[] = [];
+  if (e.eventSource === "instagram_media") classes.push("fc-event-instagram-published");
+  else if (e.status === "agendado") classes.push("fc-event-agendado");
+  else if (e.status === "publicado") classes.push("fc-event-publicado");
+  return classes;
+}
 
 export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
   const router = useRouter();
@@ -28,12 +43,15 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
   const fcEvents = useMemo(
     () =>
       events.map((e) => ({
-        id: e.id,
-        title: `${e.platformName}: ${e.title}`,
+        id: e.eventSource === "instagram_media" ? `ig:${e.id}` : e.id,
+        title:
+          e.eventSource === "instagram_media"
+            ? `IG: ${e.title}`
+            : `${e.platformName}: ${e.title}`,
         start: e.start,
-        backgroundColor:
-          e.campaignColor ?? statusColors[e.status] ?? statusColors.rascunho,
+        backgroundColor: eventBackgroundColor(e),
         borderColor: "transparent",
+        editable: e.eventSource === "content_post",
         extendedProps: e,
       })),
     [events],
@@ -41,6 +59,13 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
 
   const onEventClick = useCallback(
     (info: EventClickArg) => {
+      const props = info.event.extendedProps as CalendarPostEvent;
+      if (props.eventSource === "instagram_media") {
+        router.push(
+          `/modulos/marketing/calendario-conteudo/instagram/${encodeURIComponent(props.id)}`,
+        );
+        return;
+      }
       router.push(`/modulos/marketing/calendario-conteudo/${info.event.id}`);
     },
     [router],
@@ -48,7 +73,12 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
 
   const onEventDrop = useCallback(
     (info: EventDropArg) => {
-      const status = info.event.extendedProps.status as string;
+      const props = info.event.extendedProps as CalendarPostEvent;
+      if (props.eventSource === "instagram_media") {
+        info.revert();
+        return;
+      }
+      const status = props.status as string;
       if (["publicando", "publicado", "falhou", "cancelado"].includes(status)) {
         info.revert();
         toast.error("Este post não pode ser reagendado");
@@ -69,14 +99,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           info.revert();
           toast.error(String(res.error));
         } else {
-          toast.success("Post reagendado", {
-            action: {
-              label: "Desfazer",
-              onClick: () => {
-                /* user can drag again */
-              },
-            },
-          });
+          toast.success("Post reagendado");
           router.refresh();
         }
       });
@@ -118,10 +141,36 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           droppable={false}
           eventClick={onEventClick}
           eventDrop={onEventDrop}
+          eventClassNames={(arg) =>
+            eventClassNames(arg.event.extendedProps as CalendarPostEvent)
+          }
           height="auto"
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
         />
+      </div>
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.instagram_publicado }}
+          />
+          Publicado no Instagram (sincronizado)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.agendado }}
+          />
+          Agendado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.publicado }}
+          />
+          Publicado pela plataforma
+        </span>
       </div>
     </div>
   );
