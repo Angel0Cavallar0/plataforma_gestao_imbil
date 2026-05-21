@@ -60,21 +60,19 @@ function UnifiedMetricCard({
   const chartData = chartDataUnifiedOrganicPaid(history, organicKey, paidKey);
 
   return (
-    <Card className="sm:col-span-2">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <p className="text-2xl font-semibold tabular-nums">
-            <span className="text-base font-normal text-muted-foreground">
-              Orgânico:{" "}
-            </span>
+        <div className="space-y-0.5">
+          <p className="text-xl font-semibold tabular-nums">
+            <span className="text-xs font-normal text-muted-foreground">Orgânico: </span>
             {formatValue(organicKey, organicCurrent)}
           </p>
           {showPaid && (
-            <p className="text-2xl font-semibold tabular-nums">
-              <span className="text-base font-normal text-muted-foreground">Pago: </span>
+            <p className="text-xl font-semibold tabular-nums">
+              <span className="text-xs font-normal text-muted-foreground">Pago: </span>
               {formatValue(paidKey, paidCurrent)}
             </p>
           )}
@@ -82,7 +80,7 @@ function UnifiedMetricCard({
       </CardHeader>
       <CardContent className="pt-0">
         {chartData.length > 0 ? (
-          <div className="h-40 w-full">
+          <div className="h-36 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}

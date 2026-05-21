@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { InstagramCarouselChild, InstagramMediaInsightRow } from "@/types/marketing";
+import { SocialProfileAvatar } from "@/components/marketing/calendar/SocialProfileAvatar";
 import { cn } from "@/lib/utils";
 
 const ACCOUNT_LABEL = "imbil";
@@ -160,11 +161,7 @@ export function InstagramPublishedPreview({
   return (
     <div className="overflow-hidden rounded-xl border bg-white text-black shadow-sm">
       <div className="flex items-center gap-2 border-b border-neutral-200 px-3 py-2">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
-          <div className="h-full w-full rounded-full bg-white p-[1px]">
-            <div className="h-full w-full rounded-full bg-neutral-200" />
-          </div>
-        </div>
+        <SocialProfileAvatar />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold">{ACCOUNT_LABEL}</p>
           <p className="text-[10px] text-neutral-500">
