@@ -5,7 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventClickArg, EventDropArg } from "@fullcalendar/core";
+import type { EventClickArg, EventDropArg, EventMountArg } from "@fullcalendar/core";
 import { useRouter } from "next/navigation";
 import { reschedulePostAction } from "@/server/actions/marketing/content";
 import type { CalendarPostEvent } from "@/types/marketing";
@@ -27,12 +27,18 @@ function eventBackgroundColor(e: CalendarPostEvent): string {
   return statusColors[e.status] ?? statusColors.rascunho;
 }
 
-function eventClassNames(e: CalendarPostEvent): string[] {
-  const classes: string[] = [];
-  if (e.eventSource === "instagram_media") classes.push("fc-event-instagram-published");
-  else if (e.status === "agendado") classes.push("fc-event-agendado");
-  else if (e.status === "publicado") classes.push("fc-event-publicado");
-  return classes;
+function eventStatusClass(e: CalendarPostEvent): string {
+  if (e.eventSource === "instagram_media") return "fc-event-status-instagram";
+  return `fc-event-status-${e.status}`;
+}
+
+function applyEventColors(el: HTMLElement, bg: string) {
+  el.style.backgroundColor = bg;
+  el.style.borderColor = bg;
+  el.style.color = "#ffffff";
+  el.querySelectorAll(".fc-event-main, .fc-event-title").forEach((node) => {
+    (node as HTMLElement).style.color = "#ffffff";
+  });
 }
 
 export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
@@ -42,18 +48,23 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
 
   const fcEvents = useMemo(
     () =>
-      events.map((e) => ({
-        id: e.eventSource === "instagram_media" ? `ig:${e.id}` : e.id,
-        title:
-          e.eventSource === "instagram_media"
-            ? `IG: ${e.title}`
-            : `${e.platformName}: ${e.title}`,
-        start: e.start,
-        backgroundColor: eventBackgroundColor(e),
-        borderColor: "transparent",
-        editable: e.eventSource === "content_post",
-        extendedProps: e,
-      })),
+      events.map((e) => {
+        const bg = eventBackgroundColor(e);
+        return {
+          id: e.eventSource === "instagram_media" ? `ig:${e.id}` : e.id,
+          title:
+            e.eventSource === "instagram_media"
+              ? `IG: ${e.title}`
+              : `${e.platformName}: ${e.title}`,
+          start: e.start,
+          backgroundColor: bg,
+          borderColor: bg,
+          textColor: "#ffffff",
+          classNames: [eventStatusClass(e)],
+          editable: e.eventSource === "content_post",
+          extendedProps: e,
+        };
+      }),
     [events],
   );
 
@@ -107,6 +118,11 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
     [router],
   );
 
+  const onEventDidMount = useCallback((info: EventMountArg) => {
+    const props = info.event.extendedProps as CalendarPostEvent;
+    applyEventColors(info.el, eventBackgroundColor(props));
+  }, []);
+
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
@@ -141,9 +157,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           droppable={false}
           eventClick={onEventClick}
           eventDrop={onEventDrop}
-          eventClassNames={(arg) =>
-            eventClassNames(arg.event.extendedProps as CalendarPostEvent)
-          }
+          eventDidMount={onEventDidMount}
           height="auto"
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
