@@ -63,11 +63,21 @@ export async function getInstagramMediaInsightHistory(
   return (data ?? []) as InstagramMediaInsightRow[];
 }
 
+/** Snapshot with the newest data_referencia (source of truth for media_url). */
 export async function getInstagramMediaLatest(
   mediaId: string,
 ): Promise<InstagramMediaInsightRow | null> {
-  const history = await getInstagramMediaInsightHistory(mediaId);
-  return history.length ? history[history.length - 1]! : null;
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_media_insights")
+    .select("*")
+    .eq("media_id", mediaId)
+    .order("data_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as InstagramMediaInsightRow | null) ?? null;
 }
 
 export async function getInstagramCarouselChildren(

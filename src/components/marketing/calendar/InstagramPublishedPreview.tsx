@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { InstagramCarouselChild, InstagramMediaInsightRow } from "@/types/marketing";
 import { cn } from "@/lib/utils";
 
 const ACCOUNT_LABEL = "imbil";
 
-type Slide = {
-  mediaUrl: string | null;
-  thumbnailUrl: string | null;
-  type: string;
-};
+function instagramMediaProxyUrl(mediaId: string): string {
+  return `/api/marketing/instagram-media/${encodeURIComponent(mediaId)}`;
+}
 
 function isVideoType(type: string, productType: string | null) {
   const t = type.toUpperCase();
@@ -20,72 +18,55 @@ function isVideoType(type: string, productType: string | null) {
   return t === "VIDEO" || t === "REELS" || p === "REELS" || p === "VIDEO";
 }
 
-function InstagramMediaFrame({
-  slide,
-  isVideo,
-  permalink,
+function InstagramVideoFrame({
+  mediaId,
+  posterUrl,
 }: {
-  slide: Slide;
-  isVideo: boolean;
-  permalink: string | null;
+  mediaId: string;
+  posterUrl: string | null;
 }) {
-  const [videoFailed, setVideoFailed] = useState(false);
-  const poster = slide.thumbnailUrl ?? undefined;
-  const visualUrl = slide.thumbnailUrl ?? slide.mediaUrl;
+  const [failed, setFailed] = useState(false);
+  const src = instagramMediaProxyUrl(mediaId);
 
-  if (!visualUrl && !slide.mediaUrl) {
+  if (failed) {
+    return (
+      <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-neutral-900 px-4 text-center text-sm text-neutral-300">
+        {posterUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={posterUrl}
+            alt=""
+            className="max-h-48 w-full object-contain opacity-80"
+          />
+        ) : null}
+        <p>Não foi possível reproduzir o vídeo. A URL pode ter expirado na origem.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative aspect-[4/5] w-full bg-black">
+      <video
+        key={src}
+        src={src}
+        poster={posterUrl ?? undefined}
+        className="h-full w-full object-cover"
+        controls
+        playsInline
+        preload="auto"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+function InstagramImageFrame({ src, alt = "" }: { src: string; alt?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
     return (
       <div className="flex aspect-[4/5] w-full items-center justify-center bg-neutral-100 text-sm text-neutral-500">
-        Mídia indisponível
-      </div>
-    );
-  }
-
-  if (isVideo && slide.mediaUrl && !videoFailed) {
-    return (
-      <div className="relative aspect-[4/5] w-full bg-black">
-        <video
-          src={slide.mediaUrl}
-          poster={poster}
-          className="h-full w-full object-cover"
-          controls
-          playsInline
-          preload="metadata"
-          onError={() => setVideoFailed(true)}
-        />
-      </div>
-    );
-  }
-
-  if (isVideo && visualUrl) {
-    return (
-      <div className="relative aspect-[4/5] w-full bg-black">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={visualUrl}
-          alt=""
-          className="h-full w-full object-cover"
-          referrerPolicy="no-referrer"
-        />
-        {permalink ? (
-          <a
-            href={permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/40"
-            aria-label="Reproduzir no Instagram"
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg">
-              <Play className="h-7 w-7 fill-black text-black pl-0.5" />
-            </span>
-          </a>
-        ) : (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg">
-              <Play className="h-7 w-7 fill-black text-black pl-0.5" />
-            </span>
-          </div>
-        )}
+        Imagem indisponível
       </div>
     );
   }
@@ -94,19 +75,21 @@ function InstagramMediaFrame({
     <div className="aspect-[4/5] w-full bg-neutral-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={visualUrl ?? slide.mediaUrl ?? ""}
-        alt=""
+        src={src}
+        alt={alt}
         className="h-full w-full object-cover"
-        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
       />
     </div>
   );
 }
 
 export function InstagramPublishedPreview({
+  mediaId,
   latest,
   carouselItems,
 }: {
+  mediaId: string;
   latest: InstagramMediaInsightRow;
   carouselItems: InstagramCarouselChild[];
 }) {
@@ -114,35 +97,53 @@ export function InstagramPublishedPreview({
   const isCarousel = carouselItems.length > 0;
   const isVideo = isVideoType(latest.media_type, latest.media_product_type);
 
-  const slides: Slide[] = isCarousel
-    ? carouselItems.map((c) => ({
-        mediaUrl: c.media_url,
-        thumbnailUrl: c.thumbnail_url,
-        type: c.media_type,
-      }))
-    : [
-        {
-          mediaUrl: latest.media_url,
-          thumbnailUrl: latest.thumbnail_url,
-          type: latest.media_type,
-        },
-      ];
-
-  const current = slides[activeIndex] ?? slides[0];
-  const slideIsVideo =
-    isVideo || (current ? isVideoType(current.type, latest.media_product_type) : false);
-
   const caption = latest.caption ?? "";
   const lines = caption.trim().split("\n");
   const firstLine = lines[0] ?? "";
   const rest = lines.slice(1).join("\n");
 
   function prev() {
-    setActiveIndex((i) => (i <= 0 ? slides.length - 1 : i - 1));
+    if (!isCarousel) return;
+    setActiveIndex((i) => (i <= 0 ? carouselItems.length - 1 : i - 1));
   }
 
   function next() {
-    setActiveIndex((i) => (i >= slides.length - 1 ? 0 : i + 1));
+    if (!isCarousel) return;
+    setActiveIndex((i) => (i >= carouselItems.length - 1 ? 0 : i + 1));
+  }
+
+  function renderMedia() {
+    if (isCarousel) {
+      const child = carouselItems[activeIndex];
+      if (!child) return null;
+      const childIsVideo = isVideoType(child.media_type, latest.media_product_type);
+      if (childIsVideo) {
+        return <InstagramVideoFrame mediaId={mediaId} posterUrl={child.thumbnail_url} />;
+      }
+      const imgSrc = child.media_url ?? child.thumbnail_url;
+      if (!imgSrc) {
+        return (
+          <div className="flex aspect-[4/5] items-center justify-center text-sm text-neutral-500">
+            Mídia indisponível
+          </div>
+        );
+      }
+      return <InstagramImageFrame src={imgSrc} />;
+    }
+
+    if (isVideo) {
+      return <InstagramVideoFrame mediaId={mediaId} posterUrl={latest.thumbnail_url} />;
+    }
+
+    const imgSrc = latest.media_url ?? latest.thumbnail_url;
+    if (!imgSrc) {
+      return (
+        <div className="flex aspect-[4/5] items-center justify-center text-sm text-neutral-500">
+          Mídia indisponível
+        </div>
+      );
+    }
+    return <InstagramImageFrame src={imgSrc} />;
   }
 
   return (
@@ -162,14 +163,8 @@ export function InstagramPublishedPreview({
       </div>
 
       <div className="relative">
-        {current && (
-          <InstagramMediaFrame
-            slide={current}
-            isVideo={slideIsVideo}
-            permalink={latest.permalink}
-          />
-        )}
-        {slides.length > 1 && (
+        {renderMedia()}
+        {isCarousel && carouselItems.length > 1 && (
           <>
             <Button
               type="button"
@@ -192,7 +187,7 @@ export function InstagramPublishedPreview({
               <ChevronRight className="h-4 w-4" />
             </Button>
             <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-              {slides.map((_, i) => (
+              {carouselItems.map((_, i) => (
                 <span
                   key={i}
                   className={cn(

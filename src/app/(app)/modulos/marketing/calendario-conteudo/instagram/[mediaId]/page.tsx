@@ -3,6 +3,7 @@ import { InstagramMediaDetailShell } from "@/components/marketing/calendar/Insta
 import {
   getInstagramCarouselChildren,
   getInstagramMediaInsightHistory,
+  getInstagramMediaLatest,
 } from "@/server/queries/marketing/instagram-insights";
 
 export default async function InstagramMediaDetailPage({
@@ -13,16 +14,18 @@ export default async function InstagramMediaDetailPage({
   const { mediaId } = await params;
   const decodedId = decodeURIComponent(mediaId);
 
-  const [history, carouselChildren] = await Promise.all([
+  const [latest, history, carouselChildren] = await Promise.all([
+    getInstagramMediaLatest(decodedId),
     getInstagramMediaInsightHistory(decodedId),
     getInstagramCarouselChildren(decodedId),
   ]);
 
-  if (!history.length) notFound();
+  if (!latest || !history.length) notFound();
 
   return (
     <InstagramMediaDetailShell
       mediaId={decodedId}
+      latest={latest}
       history={history}
       carouselChildren={carouselChildren}
     />

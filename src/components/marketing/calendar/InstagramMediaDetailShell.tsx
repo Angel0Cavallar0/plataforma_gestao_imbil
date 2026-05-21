@@ -10,14 +10,17 @@ import type { InstagramCarouselChild, InstagramMediaInsightRow } from "@/types/m
 
 type Props = {
   mediaId: string;
+  latest: InstagramMediaInsightRow;
   history: InstagramMediaInsightRow[];
   carouselChildren: InstagramCarouselChild[];
 };
 
-export function InstagramMediaDetailShell({ mediaId, history, carouselChildren }: Props) {
-  const latest = history[history.length - 1];
-  if (!latest) return null;
-
+export function InstagramMediaDetailShell({
+  mediaId,
+  latest,
+  history,
+  carouselChildren,
+}: Props) {
   const title = truncateCaption(latest.caption, 80);
   const publishedLabel = latest.published_at
     ? new Date(latest.published_at).toLocaleString("pt-BR")
@@ -47,7 +50,11 @@ export function InstagramMediaDetailShell({ mediaId, history, carouselChildren }
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-6">
-          <InstagramPublishedPreview latest={latest} carouselItems={carouselChildren} />
+          <InstagramPublishedPreview
+            mediaId={mediaId}
+            latest={latest}
+            carouselItems={carouselChildren}
+          />
           {latest.permalink && (
             <a
               href={latest.permalink}
