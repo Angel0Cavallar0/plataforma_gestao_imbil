@@ -170,6 +170,12 @@
   color: #ffffff !important;
 }
 
+.fc-event-status-facebook {
+  background-color: #1e40af !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
 .fc-event-status-agendado {
   background-color: #1d4ed8 !important;
   border-color: #1d4ed8 !important;

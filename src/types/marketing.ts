@@ -128,9 +128,12 @@ export type PostWithRelations = Post & {
   assets: AssetWithPreview[];
 };
 
-export type CalendarEventSource = "content_post" | "instagram_media";
+export type CalendarEventSource = "content_post" | "instagram_media" | "facebook_post";
 
-export type CalendarEventStatus = PostStatus | "instagram_publicado";
+export type CalendarEventStatus =
+  | PostStatus
+  | "instagram_publicado"
+  | "facebook_publicado";
 
 export type CalendarPostEvent = {
   id: string;
@@ -182,6 +185,46 @@ export type InstagramCarouselChild = {
   media_url: string | null;
   thumbnail_url: string | null;
   coletado_em: string | null;
+};
+
+export type FacebookPostInsightRow = {
+  post_id: string;
+  data_referencia: string;
+  published_at: string | null;
+  permalink: string | null;
+  message: string | null;
+  post_type: string | null;
+  reach: number | null;
+  impressions: number | null;
+  engaged_users: number | null;
+  reactions_total: number | null;
+  reactions_like: number | null;
+  reactions_love: number | null;
+  reactions_haha: number | null;
+  reactions_wow: number | null;
+  reactions_sad: number | null;
+  reactions_angry: number | null;
+  comments: number | null;
+  shares: number | null;
+  clicks: number | null;
+  video_views: number | null;
+  video_views_organic: number | null;
+  video_views_paid: number | null;
+  video_complete_views: number | null;
+  video_avg_watch_time: number | null;
+  is_boosted: boolean;
+  ad_spend: number | null;
+  ad_impressions: number | null;
+  ad_reach: number | null;
+  coletado_em: string;
+};
+
+export type CrossPostLink = {
+  id: string;
+  facebook_post_id: string;
+  instagram_media_id: string;
+  linked_at: string;
+  match_method: string;
 };
 
 export type InstagramMediaComment = {

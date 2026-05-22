@@ -1,7 +1,7 @@
 import { metaGet } from "@/lib/integrations/meta/client";
 import type { InstagramMediaComment } from "@/types/marketing";
 
-type GraphCommentFrom = { id: string; username?: string };
+type GraphCommentFrom = { id: string; username?: string; name?: string };
 type GraphCommentNode = {
   id: string;
   text?: string;
@@ -10,6 +10,7 @@ type GraphCommentNode = {
   username?: string;
   from?: GraphCommentFrom;
   replies?: { data?: GraphCommentNode[] };
+  comments?: { data?: GraphCommentNode[] };
 };
 
 type GraphCommentsResponse = {
@@ -37,4 +38,24 @@ export async function fetchInstagramMediaComments(
       "id,text,timestamp,like_count,username,from{id,username},replies{id,text,timestamp,like_count,username,from{id,username}}",
   });
   return (res.data ?? []).map(mapComment);
+}
+
+function mapFacebookComment(node: GraphCommentNode): InstagramMediaComment {
+  const nested = node.comments?.data ?? node.replies?.data;
+  return {
+    ...mapComment(node),
+    username: node.username ?? node.from?.username ?? node.from?.name,
+    replies: nested?.map(mapFacebookComment),
+  };
+}
+
+export async function fetchFacebookPostComments(
+  postId: string,
+  token: string,
+): Promise<InstagramMediaComment[]> {
+  const res = await metaGet<GraphCommentsResponse>(`/${postId}/comments`, token, {
+    fields:
+      "id,text,timestamp,like_count,from{id,name},comments{id,text,timestamp,like_count,from{id,name}}",
+  });
+  return (res.data ?? []).map(mapFacebookComment);
 }
