@@ -17,12 +17,12 @@ import {
   chartDataReactionsMultiLine,
   chartDataUnifiedOrganicPaid,
   chartDataVideoViewsMultiLine,
+  chartYDomain,
   engagementRateFromHistory,
   FB_CORE_METRICS,
   FB_METRIC_LABELS,
   FB_PAID_METRICS,
   FB_REACTION_COLORS,
-  FB_REACTION_METRICS,
   FB_TOP_REACH_PAIR,
   FB_VIDEO_OTHER_METRICS,
   FB_VIDEO_VIEW_COLORS,
@@ -30,6 +30,7 @@ import {
   formatEngagementRate,
   formatMetricValue,
   metricValue,
+  reactionMetricsWithData,
   ORGANIC_LINE_COLOR,
   PAID_LINE_COLOR,
   ENGAGEMENT_RATE_COLOR,
@@ -43,9 +44,8 @@ import {
   type FbVideoMetricKey,
 } from "@/lib/marketing/facebook-insights";
 import type { FacebookPostInsightRow } from "@/types/marketing";
-import { cn } from "@/lib/utils";
 
-const CHART_HEIGHT = "h-36";
+const CHART_BOX = "h-36 w-full min-h-36";
 
 const METRIC_COLORS: Partial<Record<FbMetricKey, string>> = {
   engaged_users: "#1877F2",
@@ -72,9 +72,12 @@ function UnifiedMetricCard({
   const organicCurrent = metricValue(history, organicKey);
   const paidCurrent = metricValue(history, paidKey);
   const chartData = chartDataUnifiedOrganicPaid(history, organicKey, paidKey);
+  const yDomain = chartYDomain(
+    chartData.flatMap((d) => [d.organic, ...(showPaid ? [d.paid] : [])]),
+  );
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -92,9 +95,9 @@ function UnifiedMetricCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0">
+      <CardContent className="pt-0">
         {chartData.length > 0 ? (
-          <div className={cn("w-full flex-1", CHART_HEIGHT)}>
+          <div className={CHART_BOX}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -106,7 +109,7 @@ function UnifiedMetricCard({
                   tick={{ fontSize: 10 }}
                   interval="preserveStartEnd"
                 />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
+                <YAxis tick={{ fontSize: 10 }} width={40} domain={yDomain} />
                 <Tooltip
                   formatter={(v, name) => [
                     formatMetricValue(name === "paid" ? paidKey : organicKey, Number(v)),
@@ -150,9 +153,10 @@ function UnifiedMetricCard({
 function EngagementRateCard({ history }: { history: FacebookPostInsightRow[] }) {
   const current = engagementRateFromHistory(history);
   const chartData = chartDataEngagementRate(history);
+  const yDomain = chartYDomain(chartData.map((d) => d.value));
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Engajamento do post
@@ -161,9 +165,9 @@ function EngagementRateCard({ history }: { history: FacebookPostInsightRow[] }) 
           {formatEngagementRate(current)}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0">
+      <CardContent className="pt-0">
         {chartData.length > 0 ? (
-          <div className={cn("w-full flex-1", CHART_HEIGHT)}>
+          <div className={CHART_BOX}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -178,6 +182,7 @@ function EngagementRateCard({ history }: { history: FacebookPostInsightRow[] }) 
                 <YAxis
                   tick={{ fontSize: 10 }}
                   width={44}
+                  domain={yDomain}
                   tickFormatter={(v) => `${v}%`}
                 />
                 <Tooltip
@@ -225,9 +230,10 @@ function MetricCardWithChart({
   const current = metricValue(history, valueKey);
   const chartData = chartDataForMetric(history, valueKey);
   const color = METRIC_COLORS[valueKey] ?? "#1877F2";
+  const yDomain = chartYDomain(chartData.map((d) => d.value));
 
   return (
-    <Card className={cn("flex h-full flex-col", className)}>
+    <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {label}
@@ -236,9 +242,9 @@ function MetricCardWithChart({
           {formatMetricValue(valueKey, current)}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0">
+      <CardContent className="pt-0">
         {chartData.length > 0 ? (
-          <div className={cn("w-full flex-1", CHART_HEIGHT)}>
+          <div className={CHART_BOX}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -250,7 +256,7 @@ function MetricCardWithChart({
                   tick={{ fontSize: 10 }}
                   interval="preserveStartEnd"
                 />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
+                <YAxis tick={{ fontSize: 10 }} width={40} domain={yDomain} />
                 <Tooltip
                   formatter={(v) => formatMetricValue(valueKey, Number(v))}
                   labelFormatter={(l) => String(l)}
@@ -277,8 +283,42 @@ function MetricCardWithChart({
   );
 }
 
+function ReactionsTooltipContent({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ dataKey?: string | number; value?: number; color?: string }>;
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  const rows = payload.filter((p) => Number(p.value) > 0);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <p className="mb-1.5 font-medium text-popover-foreground">{String(label)}</p>
+      <ul className="space-y-0.5">
+        {rows.map((p) => {
+          const key = String(p.dataKey) as FbReactionMetricKey;
+          return (
+            <li key={key} className="tabular-nums" style={{ color: p.color }}>
+              {FB_METRIC_LABELS[key]} : {Number(p.value).toLocaleString("pt-BR")}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function ReactionsMultiLineCard({ history }: { history: FacebookPostInsightRow[] }) {
   const chartData = chartDataReactionsMultiLine(history);
+  const activeMetrics = reactionMetricsWithData(history);
+  const yDomain = chartYDomain(
+    chartData.flatMap((d) => activeMetrics.map((key) => Number(d[key] ?? 0))),
+  );
 
   return (
     <Card>
@@ -288,8 +328,8 @@ function ReactionsMultiLineCard({ history }: { history: FacebookPostInsightRow[]
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        {chartData.length > 0 ? (
-          <div className={cn("w-full", CHART_HEIGHT)}>
+        {chartData.length > 0 && activeMetrics.length > 0 ? (
+          <div className={CHART_BOX}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -301,16 +341,10 @@ function ReactionsMultiLineCard({ history }: { history: FacebookPostInsightRow[]
                   tick={{ fontSize: 10 }}
                   interval="preserveStartEnd"
                 />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
-                <Tooltip
-                  formatter={(v, name) => [
-                    Number(v).toLocaleString("pt-BR"),
-                    FB_METRIC_LABELS[name as FbReactionMetricKey] ?? String(name),
-                  ]}
-                  labelFormatter={(l) => String(l)}
-                />
+                <YAxis tick={{ fontSize: 10 }} width={40} domain={yDomain} />
+                <Tooltip content={<ReactionsTooltipContent />} />
                 <Legend />
-                {FB_REACTION_METRICS.map((key) => (
+                {activeMetrics.map((key) => (
                   <Line
                     key={key}
                     type="monotone"
@@ -336,17 +370,20 @@ function ReactionsMultiLineCard({ history }: { history: FacebookPostInsightRow[]
 
 function VideoViewsMultiLineCard({ history }: { history: FacebookPostInsightRow[] }) {
   const chartData = chartDataVideoViewsMultiLine(history);
+  const yDomain = chartYDomain(
+    chartData.flatMap((d) => FB_VIDEO_VIEW_METRICS.map((key) => Number(d[key] ?? 0))),
+  );
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Visualizações de vídeo
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0">
+      <CardContent className="pt-0">
         {chartData.length > 0 ? (
-          <div className={cn("w-full flex-1", CHART_HEIGHT)}>
+          <div className={CHART_BOX}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -358,7 +395,7 @@ function VideoViewsMultiLineCard({ history }: { history: FacebookPostInsightRow[
                   tick={{ fontSize: 10 }}
                   interval="preserveStartEnd"
                 />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
+                <YAxis tick={{ fontSize: 10 }} width={40} domain={yDomain} />
                 <Tooltip
                   formatter={(v, name) => [
                     Number(v).toLocaleString("pt-BR"),
@@ -418,7 +455,7 @@ export function FacebookInsightMetricGrid({
         <EngagementRateCard history={history} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {FB_CORE_METRICS.map((key) => (
           <MetricCardWithChart
             key={key}

@@ -237,6 +237,27 @@ export function chartDataReactionsMultiLine(history: FacebookPostInsightRow[]) {
   });
 }
 
+/** Reações com pelo menos um valor > 0 no histórico (para linhas e legenda). */
+export function reactionMetricsWithData(
+  history: FacebookPostInsightRow[],
+): FbReactionMetricKey[] {
+  return FB_REACTION_METRICS.filter((key) =>
+    history.some((row) => Number(row[key] ?? 0) > 0),
+  );
+}
+
+/** Domínio Y com folga quando todos os pontos têm o mesmo valor (evita linha invisível). */
+export function chartYDomain(values: number[]): [number, number] {
+  if (values.length === 0) return [0, 1];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min === max) {
+    const pad = min === 0 ? 1 : Math.max(1, Math.ceil(min * 0.1));
+    return [Math.max(0, min - pad), max + pad];
+  }
+  return [Math.max(0, min), max];
+}
+
 export function chartDataVideoViewsMultiLine(history: FacebookPostInsightRow[]) {
   return history.map((row) => {
     const point: Record<string, string | number> = {
