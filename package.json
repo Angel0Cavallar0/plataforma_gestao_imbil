@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "node -e \"if (!process.env.VERCEL) require('child_process').execSync('husky', {stdio: 'inherit'})\""
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,css,md}": [
