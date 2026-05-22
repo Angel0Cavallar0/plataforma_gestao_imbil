@@ -37,6 +37,7 @@ import {
   type CarouselEditorItem,
   type CarouselPendingItem,
 } from "@/components/marketing/calendar/PostCarouselAssetsEditor";
+import { PostSingleMediaEditor } from "@/components/marketing/calendar/PostSingleMediaEditor";
 import type { PreviewMediaItem } from "@/components/marketing/calendar/PostSocialPreview";
 import type { CreatePostInput } from "@/lib/validations/marketing/content";
 import type { ContentType, Platform, PostWithRelations } from "@/types/marketing";
@@ -119,6 +120,7 @@ export function PostForm({
   const [contentType, setContentType] = useState<CreatableContentType>(
     toCreatableContentType(post?.content_type),
   );
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [fileMimeType, setFileMimeType] = useState<string | undefined>();
   const [carouselItems, setCarouselItems] = useState<CarouselEditorItem[]>(() =>
@@ -131,14 +133,19 @@ export function PostForm({
     () => [...(post?.assets ?? [])].sort((a, b) => a.display_order - b.display_order),
     [post?.assets],
   );
-  const existingAssetUrl = assetPreviewUrl(sortedPostAssets[0]);
+  const primarySavedAsset = sortedPostAssets[0];
+  const existingAssetUrl = assetPreviewUrl(primarySavedAsset);
+  const singleMediaPreviewUrl = pendingFile ? filePreviewUrl : existingAssetUrl;
+  const singleMediaMimeType = pendingFile
+    ? fileMimeType
+    : (primarySavedAsset?.mime_type ?? undefined);
   const mediaPreviewUrl = isCarousel
     ? ((carouselItems[0]?.kind === "pending"
         ? carouselItems[0].data.previewUrl
         : carouselItems[0]?.kind === "saved"
           ? carouselItems[0].data.previewUrl
           : null) ?? existingAssetUrl)
-    : (filePreviewUrl ?? existingAssetUrl);
+    : singleMediaPreviewUrl;
   const mediaMimeType = isCarousel
     ? ((carouselItems[0]?.kind === "pending"
         ? carouselItems[0].data.mimeType
@@ -147,7 +154,7 @@ export function PostForm({
           : undefined) ??
       sortedPostAssets[0]?.mime_type ??
       undefined)
-    : (fileMimeType ?? sortedPostAssets[0]?.mime_type ?? undefined);
+    : singleMediaMimeType;
   const previewMediaItems = useMemo((): PreviewMediaItem[] | undefined => {
     if (!isCarousel) return undefined;
     const items: PreviewMediaItem[] = [];
@@ -379,15 +386,12 @@ export function PostForm({
             const ok = await persistCarouselMedia(postId, carouselItems);
             if (!ok) break;
           }
-        } else {
-          const file = form.get("file") as File | null;
-          if (file?.size && ids.length) {
-            for (const postId of ids) {
-              const fd = new FormData();
-              fd.set("file", file);
-              const up = await uploadAssetAction(postId, fd);
-              if (up.error) toast.error(String(up.error));
-            }
+        } else if (pendingFile?.size && ids.length) {
+          for (const postId of ids) {
+            const fd = new FormData();
+            fd.set("file", pendingFile);
+            const up = await uploadAssetAction(postId, fd);
+            if (up.error) toast.error(String(up.error));
           }
         }
 
@@ -425,14 +429,11 @@ export function PostForm({
             const ok = await persistCarouselMedia(postId, carouselItems);
             if (!ok) return;
           }
-        } else {
-          const file = form.get("file") as File | null;
-          if (file?.size) {
-            const fd = new FormData();
-            fd.set("file", file);
-            const up = await uploadAssetAction(postId, fd);
-            if (up.error) toast.error(String(up.error));
-          }
+        } else if (pendingFile?.size) {
+          const fd = new FormData();
+          fd.set("file", pendingFile);
+          const up = await uploadAssetAction(postId, fd);
+          if (up.error) toast.error(String(up.error));
         }
       }
 
@@ -464,16 +465,20 @@ export function PostForm({
     else router.push(cancelHref);
   }
 
-  function onFileChange(file: File | null) {
+  function onSingleFileSelect(file: File) {
     markDirty();
     if (filePreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(filePreviewUrl);
-    if (!file?.size) {
-      setFilePreviewUrl(null);
-      setFileMimeType(undefined);
-      return;
-    }
+    setPendingFile(file);
     setFilePreviewUrl(URL.createObjectURL(file));
     setFileMimeType(file.type);
+  }
+
+  function clearSinglePendingFile() {
+    markDirty();
+    if (filePreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(filePreviewUrl);
+    setPendingFile(null);
+    setFilePreviewUrl(null);
+    setFileMimeType(undefined);
   }
 
   function handleCarouselItemsChange(items: CarouselEditorItem[]) {
@@ -586,6 +591,9 @@ export function PostForm({
               const next = e.target.value as CreatableContentType;
               if (contentType === "carrossel" && next !== "carrossel") {
                 clearCarouselPending();
+              }
+              if (contentType !== "carrossel" && next === "carrossel") {
+                clearSinglePendingFile();
               }
               setContentType(next);
             }}
@@ -709,51 +717,27 @@ export function PostForm({
             onDeleteSaved={handleDeleteSavedAsset}
           />
         ) : (
-          <>
-            <Label htmlFor="file">Mídia</Label>
-            {!readOnly && (
-              <Input
-                id="file"
-                name="file"
-                type="file"
-                accept="image/jpeg,image/png,video/mp4,video/quicktime"
-                onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-              />
-            )}
-            {mediaPreviewUrl && (
-              <div className="overflow-hidden rounded-md border">
-                {mediaMimeType?.startsWith("video/") ||
-                contentType === "video" ||
-                contentType === "reels" ? (
-                  <video
-                    src={mediaPreviewUrl}
-                    className="max-h-48 w-full object-contain"
-                    controls
-                    muted
-                    playsInline
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={mediaPreviewUrl}
-                    alt=""
-                    className="max-h-48 w-full object-contain"
-                  />
-                )}
-              </div>
-            )}
-            {sortedPostAssets.length ? (
-              <ul className="text-xs text-muted-foreground">
-                {sortedPostAssets.map((a) => (
-                  <li key={a.id}>
-                    {a.file_name} ({a.asset_type})
-                  </li>
-                ))}
-              </ul>
-            ) : readOnly && !sortedPostAssets.length ? (
-              <p className="text-xs text-muted-foreground">Nenhuma mídia anexada.</p>
-            ) : null}
-          </>
+          <PostSingleMediaEditor
+            contentType={contentType}
+            pendingFileName={pendingFile?.name ?? null}
+            previewUrl={singleMediaPreviewUrl}
+            mimeType={singleMediaMimeType}
+            savedAsset={
+              primarySavedAsset && !pendingFile
+                ? {
+                    id: primarySavedAsset.id,
+                    fileName: primarySavedAsset.file_name,
+                    previewUrl: existingAssetUrl,
+                    mimeType: primarySavedAsset.mime_type ?? "image/jpeg",
+                  }
+                : null
+            }
+            readOnly={readOnly}
+            disabled={fieldDisabled || pending}
+            onFileSelect={onSingleFileSelect}
+            onClearPending={clearSinglePendingFile}
+            onDeleteSaved={handleDeleteSavedAsset}
+          />
         )}
       </div>
     </>
