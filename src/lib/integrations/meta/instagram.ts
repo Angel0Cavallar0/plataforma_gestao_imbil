@@ -1,4 +1,5 @@
 import { metaGet, metaPost } from "@/lib/integrations/meta/client";
+import { validateCarouselAssetCount } from "@/lib/marketing/content-assets";
 import { formatCaption } from "@/lib/marketing/caption";
 import type { MetaPublishResult, PostForPublish } from "@/lib/integrations/meta/types";
 
@@ -96,6 +97,9 @@ export async function publishCarouselIG(
 ): Promise<MetaPublishResult> {
   const creds = post.credentials;
   const caption = formatCaption(post.copy, post.hashtags);
+  const countError = validateCarouselAssetCount(mediaUrls.length);
+  if (countError) throw new Error(countError);
+
   const children: string[] = [];
   for (const url of mediaUrls) {
     const child = await metaPost<{ id: string }>(
@@ -117,6 +121,7 @@ export async function publishCarouselIG(
       caption,
     },
   );
+  await waitForContainer(creds.instagram_user_id, container.id, token);
   const published = await metaPost<{ id: string }>(
     `/${creds.instagram_user_id}/media_publish`,
     token,

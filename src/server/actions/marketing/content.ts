@@ -12,6 +12,7 @@ import {
   MARKETING_STORAGE_BUCKET,
   POST_STATUS_TRANSITIONS,
 } from "@/lib/constants/marketing";
+import { validateCarouselAssetCount } from "@/lib/marketing/content-assets";
 import {
   changeStatusSchema,
   createCampaignSchema,
@@ -209,6 +210,16 @@ export async function schedulePostAction(id: string) {
     return { error: "Legenda é obrigatória para agendar este tipo de post" };
   }
 
+  if (post.content_type === "carrossel") {
+    const { count, error: countError } = await marketingSchema(supabase)
+      .from("content_assets")
+      .select("id", { count: "exact", head: true })
+      .eq("post_id", id);
+    if (countError) return { error: countError.message };
+    const carouselError = validateCarouselAssetCount(count ?? 0);
+    if (carouselError) return { error: carouselError };
+  }
+
   const { error } = await marketingSchema(supabase)
     .from("content_posts")
     .update({ status: "agendado" })
@@ -386,6 +397,40 @@ export async function uploadAssetAction(postId: string, formData: FormData) {
   if (error) return { error: error.message };
   revalidateCalendar();
   return { data: asset };
+}
+
+export async function reorderAssetsAction(postId: string, orderedAssetIds: string[]) {
+  const session = await requireAuth();
+  await requireMarketingPermission(session.user.id, "update");
+  const supabase = await createClient();
+
+  const { data: existing, error: fetchError } = await marketingSchema(supabase)
+    .from("content_assets")
+    .select("id")
+    .eq("post_id", postId);
+
+  if (fetchError) return { error: fetchError.message };
+  const existingIds = new Set((existing ?? []).map((a) => a.id as string));
+  if (orderedAssetIds.length !== existingIds.size) {
+    return { error: "Lista de mídias incompleta para reordenar" };
+  }
+  for (const id of orderedAssetIds) {
+    if (!existingIds.has(id)) {
+      return { error: "Mídia inválida para este post" };
+    }
+  }
+
+  for (let i = 0; i < orderedAssetIds.length; i++) {
+    const { error } = await marketingSchema(supabase)
+      .from("content_assets")
+      .update({ display_order: i })
+      .eq("id", orderedAssetIds[i]!)
+      .eq("post_id", postId);
+    if (error) return { error: error.message };
+  }
+
+  revalidateCalendar();
+  return { ok: true };
 }
 
 export async function deleteAssetAction(assetId: string) {

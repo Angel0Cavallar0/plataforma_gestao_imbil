@@ -55,7 +55,7 @@ async function publishPost(
     .select(
       `*,
       platform:platforms(slug),
-      assets:content_assets(storage_path, asset_type),
+      assets:content_assets(storage_path, asset_type, display_order),
       credential:integration_credentials(credentials, is_active)
     `,
     )
@@ -75,6 +75,15 @@ async function publishPost(
   const platform = Array.isArray(platformRaw) ? platformRaw[0] : platformRaw;
   const credentials = credRow.credentials;
 
+  const assetsRaw = (data.assets ?? []) as Array<{
+    storage_path: string;
+    asset_type: string;
+    display_order?: number;
+  }>;
+  const sortedAssets = [...assetsRaw].sort(
+    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+  );
+
   const post: PostForPublish = {
     id: data.id,
     content_type: data.content_type,
@@ -83,7 +92,7 @@ async function publishPost(
     cta_url: data.cta_url,
     credential_id: data.credential_id,
     platform: { slug: platform?.slug ?? "" },
-    assets: (data.assets ?? []) as PostForPublish["assets"],
+    assets: sortedAssets as PostForPublish["assets"],
     credentials,
   };
 

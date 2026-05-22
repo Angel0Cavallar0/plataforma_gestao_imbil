@@ -20,15 +20,24 @@ import {
   COPY_MAX_LENGTH,
 } from "@/lib/constants/marketing";
 import { captionLength, formatCaption } from "@/lib/marketing/caption";
+import { validateCarouselAssetCount } from "@/lib/marketing/content-assets";
 import {
   createPostAction,
   createPostsBatchAction,
+  deleteAssetAction,
+  reorderAssetsAction,
   schedulePostAction,
   updatePostAction,
   uploadAssetAction,
 } from "@/server/actions/marketing/content";
 import { PostPreviewPanel } from "@/components/marketing/calendar/PostPreviewPanel";
 import { CampaignPickerDialog } from "@/components/marketing/calendar/CampaignPickerDialog";
+import {
+  PostCarouselAssetsEditor,
+  type CarouselEditorItem,
+  type CarouselPendingItem,
+} from "@/components/marketing/calendar/PostCarouselAssetsEditor";
+import type { PreviewMediaItem } from "@/components/marketing/calendar/PostSocialPreview";
 import type { CreatePostInput } from "@/lib/validations/marketing/content";
 import type { ContentType, Platform, PostWithRelations } from "@/types/marketing";
 import { toast } from "sonner";
@@ -52,6 +61,20 @@ function toCreatableContentType(value: ContentType | undefined): CreatableConten
 function assetPreviewUrl(asset: PostWithRelations["assets"][0] | undefined) {
   if (!asset) return null;
   return asset.preview_url ?? asset.public_url ?? null;
+}
+
+function savedAssetsToCarouselItems(
+  assets: PostWithRelations["assets"],
+): CarouselEditorItem[] {
+  return assets.map((a) => ({
+    kind: "saved" as const,
+    data: {
+      id: a.id,
+      fileName: a.file_name,
+      previewUrl: assetPreviewUrl(a),
+      mimeType: a.mime_type ?? "image/jpeg",
+    },
+  }));
 }
 
 type Props = {
@@ -98,9 +121,46 @@ export function PostForm({
   );
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [fileMimeType, setFileMimeType] = useState<string | undefined>();
-  const existingAssetUrl = assetPreviewUrl(post?.assets?.[0]);
-  const mediaPreviewUrl = filePreviewUrl ?? existingAssetUrl;
-  const mediaMimeType = fileMimeType ?? post?.assets?.[0]?.mime_type ?? undefined;
+  const [carouselItems, setCarouselItems] = useState<CarouselEditorItem[]>(() =>
+    post?.content_type === "carrossel"
+      ? savedAssetsToCarouselItems(post.assets ?? [])
+      : [],
+  );
+  const isCarousel = contentType === "carrossel";
+  const sortedPostAssets = useMemo(
+    () => [...(post?.assets ?? [])].sort((a, b) => a.display_order - b.display_order),
+    [post?.assets],
+  );
+  const existingAssetUrl = assetPreviewUrl(sortedPostAssets[0]);
+  const mediaPreviewUrl = isCarousel
+    ? ((carouselItems[0]?.kind === "pending"
+        ? carouselItems[0].data.previewUrl
+        : carouselItems[0]?.kind === "saved"
+          ? carouselItems[0].data.previewUrl
+          : null) ?? existingAssetUrl)
+    : (filePreviewUrl ?? existingAssetUrl);
+  const mediaMimeType = isCarousel
+    ? ((carouselItems[0]?.kind === "pending"
+        ? carouselItems[0].data.mimeType
+        : carouselItems[0]?.kind === "saved"
+          ? carouselItems[0].data.mimeType
+          : undefined) ??
+      sortedPostAssets[0]?.mime_type ??
+      undefined)
+    : (fileMimeType ?? sortedPostAssets[0]?.mime_type ?? undefined);
+  const previewMediaItems = useMemo((): PreviewMediaItem[] | undefined => {
+    if (!isCarousel) return undefined;
+    const items: PreviewMediaItem[] = [];
+    for (const item of carouselItems) {
+      const url = item.kind === "pending" ? item.data.previewUrl : item.data.previewUrl;
+      if (!url) continue;
+      items.push({
+        url,
+        mimeType: item.data.mimeType,
+      });
+    }
+    return items;
+  }, [isCarousel, carouselItems]);
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -163,13 +223,38 @@ export function PostForm({
     return credentials.find((c) => c.id === credId)?.label;
   }, [metaCredentialId, credentials, post?.credential_id]);
 
+  const savedAssetKey = sortedPostAssets.map((a) => a.id).join(",");
+
+  useEffect(() => {
+    if (contentType !== "carrossel" || !post) return;
+    queueMicrotask(() => {
+      setCarouselItems(savedAssetsToCarouselItems(sortedPostAssets));
+    });
+  }, [post, post?.id, savedAssetKey, contentType, sortedPostAssets]);
+
+  function clearCarouselPending() {
+    setCarouselItems((prev) => {
+      for (const item of prev) {
+        if (item.kind === "pending" && item.data.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(item.data.previewUrl);
+        }
+      }
+      return [];
+    });
+  }
+
   useEffect(() => {
     return () => {
       if (filePreviewUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(filePreviewUrl);
       }
+      for (const item of carouselItems) {
+        if (item.kind === "pending" && item.data.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(item.data.previewUrl);
+        }
+      }
     };
-  }, [filePreviewUrl]);
+  }, [filePreviewUrl, carouselItems]);
 
   const fieldDisabled = readOnly || isIgPublished;
 
@@ -204,6 +289,55 @@ export function PostForm({
     };
   }
 
+  async function persistCarouselMedia(
+    postId: string,
+    items: CarouselEditorItem[],
+  ): Promise<boolean> {
+    const uploadedByPendingId = new Map<string, string>();
+
+    for (const item of items) {
+      if (item.kind !== "pending") continue;
+      const fd = new FormData();
+      fd.set("file", item.data.file);
+      const up = await uploadAssetAction(postId, fd);
+      if (up.error) {
+        toast.error(String(up.error));
+        return false;
+      }
+      uploadedByPendingId.set(item.data.id, (up.data as { id: string }).id);
+    }
+
+    const orderedIds: string[] = [];
+    for (const item of items) {
+      if (item.kind === "saved") {
+        orderedIds.push(item.data.id);
+      } else {
+        const id = uploadedByPendingId.get(item.data.id);
+        if (id) orderedIds.push(id);
+      }
+    }
+
+    if (orderedIds.length > 0) {
+      const reorder = await reorderAssetsAction(postId, orderedIds);
+      if (reorder.error) {
+        toast.error(String(reorder.error));
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function validateCarouselBeforeSchedule(): boolean {
+    if (!isCarousel) return true;
+    const err = validateCarouselAssetCount(carouselItems.length);
+    if (err) {
+      toast.error(err);
+      return false;
+    }
+    return true;
+  }
+
   function buildPayload(form: FormData, targetPlatformId: string) {
     const credId = metaCredentialId || String(form.get("credential_id") || "");
     return {
@@ -217,6 +351,10 @@ export function PostForm({
     startTransition(async () => {
       if (finalLength > COPY_MAX_LENGTH) {
         toast.error(`Legenda excede ${COPY_MAX_LENGTH} caracteres`);
+        return;
+      }
+
+      if (schedule && !validateCarouselBeforeSchedule()) {
         return;
       }
 
@@ -235,14 +373,21 @@ export function PostForm({
           toast.warning(res.partialErrors.join("; "));
         }
 
-        const file = form.get("file") as File | null;
         const ids = res.data?.ids ?? [];
-        if (file?.size && ids.length) {
+        if (isCarousel && carouselItems.length > 0 && ids.length) {
           for (const postId of ids) {
-            const fd = new FormData();
-            fd.set("file", file);
-            const up = await uploadAssetAction(postId, fd);
-            if (up.error) toast.error(String(up.error));
+            const ok = await persistCarouselMedia(postId, carouselItems);
+            if (!ok) break;
+          }
+        } else {
+          const file = form.get("file") as File | null;
+          if (file?.size && ids.length) {
+            for (const postId of ids) {
+              const fd = new FormData();
+              fd.set("file", file);
+              const up = await uploadAssetAction(postId, fd);
+              if (up.error) toast.error(String(up.error));
+            }
           }
         }
 
@@ -274,12 +419,21 @@ export function PostForm({
         postId = res.data?.id as string;
       }
 
-      const file = form.get("file") as File | null;
-      if (file?.size && postId) {
-        const fd = new FormData();
-        fd.set("file", file);
-        const up = await uploadAssetAction(postId, fd);
-        if (up.error) toast.error(String(up.error));
+      if (postId) {
+        if (isCarousel) {
+          if (carouselItems.length > 0) {
+            const ok = await persistCarouselMedia(postId, carouselItems);
+            if (!ok) return;
+          }
+        } else {
+          const file = form.get("file") as File | null;
+          if (file?.size) {
+            const fd = new FormData();
+            fd.set("file", file);
+            const up = await uploadAssetAction(postId, fd);
+            if (up.error) toast.error(String(up.error));
+          }
+        }
       }
 
       if (schedule && postId) {
@@ -320,6 +474,42 @@ export function PostForm({
     }
     setFilePreviewUrl(URL.createObjectURL(file));
     setFileMimeType(file.type);
+  }
+
+  function handleCarouselItemsChange(items: CarouselEditorItem[]) {
+    markDirty();
+    setCarouselItems(items);
+    if (post?.id && items.length > 0 && items.every((i) => i.kind === "saved")) {
+      void reorderAssetsAction(
+        post.id,
+        items.map((i) => (i.kind === "saved" ? i.data.id : "")).filter(Boolean),
+      );
+    }
+  }
+
+  function addCarouselFiles(files: File[]) {
+    markDirty();
+    const pending: CarouselEditorItem[] = files.map(
+      (file): CarouselEditorItem => ({
+        kind: "pending",
+        data: {
+          id: crypto.randomUUID(),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          mimeType: file.type,
+        } satisfies CarouselPendingItem,
+      }),
+    );
+    setCarouselItems((prev) => [...prev, ...pending]);
+  }
+
+  async function handleDeleteSavedAsset(assetId: string) {
+    const res = await deleteAssetAction(assetId);
+    if (res.error) {
+      toast.error(String(res.error));
+      return;
+    }
+    markDirty();
   }
 
   const formFields = (
@@ -393,7 +583,11 @@ export function PostForm({
             disabled={fieldDisabled}
             onChange={(e) => {
               markDirty();
-              setContentType(e.target.value as CreatableContentType);
+              const next = e.target.value as CreatableContentType;
+              if (contentType === "carrossel" && next !== "carrossel") {
+                clearCarouselPending();
+              }
+              setContentType(next);
             }}
           >
             {contentTypeOptions.map((t) => (
@@ -505,49 +699,62 @@ export function PostForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="file">Mídia</Label>
-        {!readOnly && (
-          <Input
-            id="file"
-            name="file"
-            type="file"
-            accept="image/jpeg,image/png,video/mp4,video/quicktime"
-            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+        {isCarousel ? (
+          <PostCarouselAssetsEditor
+            items={carouselItems}
+            readOnly={readOnly}
+            disabled={fieldDisabled || pending}
+            onItemsChange={handleCarouselItemsChange}
+            onAddFiles={addCarouselFiles}
+            onDeleteSaved={handleDeleteSavedAsset}
           />
-        )}
-        {mediaPreviewUrl && (
-          <div className="overflow-hidden rounded-md border">
-            {mediaMimeType?.startsWith("video/") ||
-            contentType === "video" ||
-            contentType === "reels" ? (
-              <video
-                src={mediaPreviewUrl}
-                className="max-h-48 w-full object-contain"
-                controls
-                muted
-                playsInline
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={mediaPreviewUrl}
-                alt=""
-                className="max-h-48 w-full object-contain"
+        ) : (
+          <>
+            <Label htmlFor="file">Mídia</Label>
+            {!readOnly && (
+              <Input
+                id="file"
+                name="file"
+                type="file"
+                accept="image/jpeg,image/png,video/mp4,video/quicktime"
+                onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
               />
             )}
-          </div>
+            {mediaPreviewUrl && (
+              <div className="overflow-hidden rounded-md border">
+                {mediaMimeType?.startsWith("video/") ||
+                contentType === "video" ||
+                contentType === "reels" ? (
+                  <video
+                    src={mediaPreviewUrl}
+                    className="max-h-48 w-full object-contain"
+                    controls
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={mediaPreviewUrl}
+                    alt=""
+                    className="max-h-48 w-full object-contain"
+                  />
+                )}
+              </div>
+            )}
+            {sortedPostAssets.length ? (
+              <ul className="text-xs text-muted-foreground">
+                {sortedPostAssets.map((a) => (
+                  <li key={a.id}>
+                    {a.file_name} ({a.asset_type})
+                  </li>
+                ))}
+              </ul>
+            ) : readOnly && !sortedPostAssets.length ? (
+              <p className="text-xs text-muted-foreground">Nenhuma mídia anexada.</p>
+            ) : null}
+          </>
         )}
-        {post?.assets?.length ? (
-          <ul className="text-xs text-muted-foreground">
-            {post.assets.map((a) => (
-              <li key={a.id}>
-                {a.file_name} ({a.asset_type})
-              </li>
-            ))}
-          </ul>
-        ) : readOnly && !post?.assets?.length ? (
-          <p className="text-xs text-muted-foreground">Nenhuma mídia anexada.</p>
-        ) : null}
       </div>
     </>
   );
@@ -662,6 +869,7 @@ export function PostForm({
             caption={preview}
             mediaPreviewUrl={mediaPreviewUrl}
             mediaMimeType={mediaMimeType}
+            mediaItems={previewMediaItems}
             contentType={contentType}
             accountLabel={accountLabel}
           />

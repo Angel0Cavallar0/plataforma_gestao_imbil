@@ -1,5 +1,8 @@
 import { PostSocialPreview } from "@/components/marketing/calendar/PostSocialPreview";
-import type { PreviewPlatform } from "@/components/marketing/calendar/PostSocialPreview";
+import type {
+  PreviewMediaItem,
+  PreviewPlatform,
+} from "@/components/marketing/calendar/PostSocialPreview";
 import type { ContentType } from "@/types/marketing";
 
 type Props = {
@@ -7,6 +10,7 @@ type Props = {
   caption: string;
   mediaPreviewUrl: string | null;
   mediaMimeType?: string;
+  mediaItems?: PreviewMediaItem[];
   contentType: ContentType;
   accountLabel?: string;
 };
@@ -16,6 +20,7 @@ export function PostPreviewPanel({
   caption,
   mediaPreviewUrl,
   mediaMimeType,
+  mediaItems,
   contentType,
   accountLabel,
 }: Props) {
@@ -32,6 +37,7 @@ export function PostPreviewPanel({
           caption={caption}
           mediaPreviewUrl={mediaPreviewUrl}
           mediaMimeType={mediaMimeType}
+          mediaItems={mediaItems}
           contentType={contentType}
           accountLabel={accountLabel}
         />

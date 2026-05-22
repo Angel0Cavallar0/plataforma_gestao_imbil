@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { marketingSchema } from "@/lib/supabase/marketing";
 import { resolvePostAssetsPreviewUrls } from "@/lib/marketing/asset-preview";
+import { sortAssetsByDisplayOrder } from "@/lib/marketing/content-assets";
 import type {
   Asset,
   CalendarPostEvent,
@@ -120,7 +121,7 @@ export async function getPostById(id: string): Promise<PostWithRelations | null>
     Array.isArray(campaignRaw) ? campaignRaw[0] : campaignRaw
   ) as PostWithRelations["campaign"];
 
-  const rawAssets = (data.assets as Asset[]) ?? [];
+  const rawAssets = sortAssetsByDisplayOrder((data.assets as Asset[]) ?? []);
   const assets = await resolvePostAssetsPreviewUrls(rawAssets);
 
   return {

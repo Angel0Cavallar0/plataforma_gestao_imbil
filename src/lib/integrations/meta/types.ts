@@ -24,6 +24,7 @@ export type PostForPublish = {
     storage_path: string;
     mime_type: string | null;
     public_url: string | null;
+    display_order: number;
   }>;
   credentials: MetaCredentials;
 };

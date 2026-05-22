@@ -119,6 +119,11 @@ export async function publishToMetaApi(
         });
       }
       case "carrossel": {
+        if (mediaUrls.length < 2 || mediaUrls.length > 10) {
+          throw new Error(
+            `Carrossel exige entre 2 e 10 imagens (atual: ${mediaUrls.length})`,
+          );
+        }
         const children: string[] = [];
         for (const url of mediaUrls) {
           const child = await metaPost<{ id: string }>(`/${igId}/media`, token, {
@@ -132,6 +137,7 @@ export async function publishToMetaApi(
           children: children.join(","),
           caption,
         });
+        await waitForContainer(container.id, token);
         return await metaPost<{ id: string }>(`/${igId}/media_publish`, token, {
           creation_id: container.id,
         });
@@ -167,6 +173,26 @@ export async function publishToMetaApi(
           message: caption,
           link: post.cta_url ?? "",
         });
+      case "carrossel": {
+        if (mediaUrls.length < 2 || mediaUrls.length > 10) {
+          throw new Error(
+            `Carrossel exige entre 2 e 10 imagens (atual: ${mediaUrls.length})`,
+          );
+        }
+        const photoIds: string[] = [];
+        for (const url of mediaUrls) {
+          const photo = await metaPost<{ id: string }>(`/${pageId}/photos`, token, {
+            url,
+            published: "false",
+          });
+          photoIds.push(photo.id);
+        }
+        const attachedMedia = photoIds.map((id) => ({ media_fbid: id }));
+        return await metaPost<{ id: string }>(`/${pageId}/feed`, token, {
+          message: caption,
+          attached_media: JSON.stringify(attachedMedia),
+        });
+      }
       default:
         throw new Error(`Unsupported Facebook type: ${post.content_type}`);
     }

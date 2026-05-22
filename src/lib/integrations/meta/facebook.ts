@@ -65,3 +65,29 @@ export async function publishReelFB(
 ): Promise<MetaPublishResult> {
   return publishVideoFB(post, token, mediaUrl);
 }
+
+/** Carrossel multi-foto: fotos não publicadas + post no feed com attached_media. */
+export async function publishCarouselFB(
+  post: PostForPublish,
+  token: string,
+  mediaUrls: string[],
+): Promise<MetaPublishResult> {
+  const pageId = post.credentials.facebook_page_id;
+  const message = formatCaption(post.copy, post.hashtags);
+  const photoIds: string[] = [];
+
+  for (const url of mediaUrls) {
+    const photo = await metaPost<{ id: string }>(`/${pageId}/photos`, token, {
+      url,
+      published: "false",
+    });
+    photoIds.push(photo.id);
+  }
+
+  const attachedMedia = photoIds.map((id) => ({ media_fbid: id }));
+  const result = await metaPost<{ id: string }>(`/${pageId}/feed`, token, {
+    message,
+    attached_media: JSON.stringify(attachedMedia),
+  });
+  return { id: result.id };
+}

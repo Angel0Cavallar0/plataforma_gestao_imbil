@@ -13,11 +13,17 @@ export type PreviewPlatform = {
   name: string;
 };
 
+export type PreviewMediaItem = {
+  url: string;
+  mimeType?: string;
+};
+
 type Props = {
   platforms: PreviewPlatform[];
   caption: string;
   mediaPreviewUrl: string | null;
   mediaMimeType?: string;
+  mediaItems?: PreviewMediaItem[];
   contentType: ContentType;
   accountLabel?: string;
 };
@@ -61,10 +67,97 @@ function MediaBlock({
   );
 }
 
+function MediaCarouselBlock({
+  items,
+  contentType,
+}: {
+  items: PreviewMediaItem[];
+  contentType: ContentType;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const safeIndex = Math.min(activeIndex, Math.max(0, items.length - 1));
+  const current = items[safeIndex];
+
+  if (!items.length) {
+    return <MediaBlock url={null} contentType={contentType} />;
+  }
+
+  if (items.length === 1) {
+    return (
+      <MediaBlock
+        url={items[0]!.url}
+        mimeType={items[0]!.mimeType}
+        contentType={contentType}
+      />
+    );
+  }
+
+  return (
+    <div className="relative">
+      <MediaBlock
+        url={current?.url ?? null}
+        mimeType={current?.mimeType}
+        contentType={contentType}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
+        className="absolute left-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-white/90 shadow"
+        aria-label="Slide anterior"
+        onClick={() => setActiveIndex((i) => (i <= 0 ? items.length - 1 : i - 1))}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
+        className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-white/90 shadow"
+        aria-label="Próximo slide"
+        onClick={() => setActiveIndex((i) => (i >= items.length - 1 ? 0 : i + 1))}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+        {items.map((_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              i === safeIndex ? "bg-primary" : "bg-white/70",
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function resolveMedia(
+  contentType: ContentType,
+  mediaPreviewUrl: string | null,
+  mediaMimeType: string | undefined,
+  mediaItems?: PreviewMediaItem[],
+) {
+  const isCarousel = contentType === "carrossel" && (mediaItems?.length ?? 0) > 0;
+  if (isCarousel) {
+    return <MediaCarouselBlock items={mediaItems!} contentType={contentType} />;
+  }
+  return (
+    <MediaBlock
+      url={mediaPreviewUrl}
+      mimeType={mediaMimeType}
+      contentType={contentType}
+    />
+  );
+}
+
 function InstagramPreview({
   caption,
   mediaPreviewUrl,
   mediaMimeType,
+  mediaItems,
   contentType,
   accountLabel,
 }: Omit<Props, "platforms">) {
@@ -78,14 +171,12 @@ function InstagramPreview({
         <SocialProfileAvatar />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold">{accountLabel ?? "imbil"}</p>
-          <p className="text-[10px] text-neutral-500">Instagram</p>
+          <p className="text-[10px] text-neutral-500">
+            {contentType === "carrossel" ? "Carrossel" : "Instagram"}
+          </p>
         </div>
       </div>
-      <MediaBlock
-        url={mediaPreviewUrl}
-        mimeType={mediaMimeType}
-        contentType={contentType}
-      />
+      {resolveMedia(contentType, mediaPreviewUrl, mediaMimeType, mediaItems)}
       <div className="space-y-1 px-3 py-2 text-xs">
         <div className="flex gap-3 text-neutral-800">
           <span aria-hidden>♡</span>
@@ -110,6 +201,7 @@ function FacebookPreview({
   caption,
   mediaPreviewUrl,
   mediaMimeType,
+  mediaItems,
   contentType,
   accountLabel,
 }: Omit<Props, "platforms">) {
@@ -133,11 +225,7 @@ function FacebookPreview({
           <p className="text-xs text-neutral-400">Texto da publicação…</p>
         )}
       </div>
-      <MediaBlock
-        url={mediaPreviewUrl}
-        mimeType={mediaMimeType}
-        contentType={contentType}
-      />
+      {resolveMedia(contentType, mediaPreviewUrl, mediaMimeType, mediaItems)}
     </div>
   );
 }
@@ -158,6 +246,7 @@ export function PostSocialPreview({
   caption,
   mediaPreviewUrl,
   mediaMimeType,
+  mediaItems,
   contentType,
   accountLabel,
 }: Props) {
@@ -177,6 +266,7 @@ export function PostSocialPreview({
     caption,
     mediaPreviewUrl,
     mediaMimeType,
+    mediaItems,
     contentType,
     accountLabel,
   };

@@ -13,12 +13,14 @@ import {
   publishVideoIG,
 } from "@/lib/integrations/meta/instagram";
 import {
+  publishCarouselFB,
   publishImageFB,
   publishLinkFB,
   publishReelFB,
   publishTextFB,
   publishVideoFB,
 } from "@/lib/integrations/meta/facebook";
+import { sortAssetsByDisplayOrder } from "@/lib/marketing/content-assets";
 import type { MetaCredentials, PostForPublish } from "@/lib/integrations/meta/types";
 import type { MetaCredentialsJson } from "@/types/marketing";
 
@@ -41,7 +43,7 @@ async function fetchPostForPublish(postId: string): Promise<PostForPublish> {
     .select(
       `*,
       platform:platforms(slug),
-      assets:content_assets(*),
+      assets:content_assets(*, display_order),
       credential:integration_credentials(credentials)
     `,
     )
@@ -62,7 +64,7 @@ async function fetchPostForPublish(postId: string): Promise<PostForPublish> {
     cta_url: data.cta_url,
     credential_id: data.credential_id,
     platform: data.platform as { slug: string },
-    assets: (data.assets ?? []) as PostForPublish["assets"],
+    assets: sortAssetsByDisplayOrder((data.assets ?? []) as PostForPublish["assets"]),
     credentials,
   };
 }
@@ -124,6 +126,9 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
           break;
         case "reels":
           result = await publishReelFB(post, token, urls[0]!);
+          break;
+        case "carrossel":
+          result = await publishCarouselFB(post, token, urls);
           break;
         case "texto":
           result = await publishTextFB(post, token);

@@ -67,6 +67,10 @@ export const CONTENT_TYPES_REQUIRING_COPY: ContentType[] = [
 
 export const MARKETING_STORAGE_BUCKET = "marketing-content-assets";
 
+/** Instagram / Facebook carrossel: mínimo e máximo de slides (Graph API). */
+export const CAROUSEL_MIN_ITEMS = 2;
+export const CAROUSEL_MAX_ITEMS = 10;
+
 export const META_GRAPH_API_VERSION = process.env.META_GRAPH_API_VERSION ?? "v21.0";
 
 export const ASSET_LIMITS: Record<
@@ -84,5 +88,6 @@ export const ASSET_LIMITS: Record<
     imagem: { maxBytes: 4 * 1024 * 1024 },
     video: { maxBytes: 1024 * 1024 * 1024 },
     reels: { maxBytes: 1024 * 1024 * 1024, maxDurationSec: 90 },
+    carrossel: { maxBytes: 4 * 1024 * 1024 },
   },
 };
