@@ -128,15 +128,70 @@ export type PostWithRelations = Post & {
   assets: AssetWithPreview[];
 };
 
+export type CalendarEventSource = "content_post" | "instagram_media";
+
+export type CalendarEventStatus = PostStatus | "instagram_publicado";
+
 export type CalendarPostEvent = {
   id: string;
   title: string;
   start: string;
-  status: PostStatus;
+  status: CalendarEventStatus;
+  eventSource: CalendarEventSource;
   platformSlug: string;
   platformName: string;
   platformColor: string | null;
   campaignColor: string | null;
+  /** Present for content_post — used to dedupe against instagram media_id */
+  externalPostId?: string | null;
+};
+
+export type InstagramMediaInsightRow = {
+  media_id: string;
+  data_referencia: string;
+  media_type: string;
+  media_product_type: string | null;
+  published_at: string | null;
+  permalink: string | null;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  caption: string | null;
+  impressions: number | null;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saves: number | null;
+  shares: number | null;
+  plays: number | null;
+  replies: number | null;
+  exits: number | null;
+  taps_forward: number | null;
+  taps_back: number | null;
+  is_boosted: boolean | null;
+  ad_spend: number | null;
+  ad_impressions: number | null;
+  ad_reach: number | null;
+  coletado_em: string | null;
+};
+
+export type InstagramCarouselChild = {
+  child_media_id: string;
+  parent_media_id: string;
+  position: number;
+  media_type: string;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  coletado_em: string | null;
+};
+
+export type InstagramMediaComment = {
+  id: string;
+  text: string;
+  timestamp: string;
+  like_count?: number;
+  username?: string;
+  from?: { id: string; username?: string };
+  replies?: InstagramMediaComment[];
 };
 
 export type ContentKpis = {

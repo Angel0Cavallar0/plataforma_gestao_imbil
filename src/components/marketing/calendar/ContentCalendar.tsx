@@ -5,7 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventClickArg, EventDropArg } from "@fullcalendar/core";
+import type { EventClickArg, EventDropArg, EventMountArg } from "@fullcalendar/core";
 import { useRouter } from "next/navigation";
 import { reschedulePostAction } from "@/server/actions/marketing/content";
 import type { CalendarPostEvent } from "@/types/marketing";
@@ -13,12 +13,33 @@ import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   rascunho: "#9ca3af",
-  agendado: "#3b82f6",
+  agendado: "#1d4ed8",
   publicando: "#a855f7",
   publicado: "#22c55e",
   falhou: "#ef4444",
   cancelado: "#6b7280",
+  instagram_publicado: "#166534",
 };
+
+function eventBackgroundColor(e: CalendarPostEvent): string {
+  if (e.eventSource === "instagram_media") return statusColors.instagram_publicado;
+  if (e.campaignColor) return e.campaignColor;
+  return statusColors[e.status] ?? statusColors.rascunho;
+}
+
+function eventStatusClass(e: CalendarPostEvent): string {
+  if (e.eventSource === "instagram_media") return "fc-event-status-instagram";
+  return `fc-event-status-${e.status}`;
+}
+
+function applyEventColors(el: HTMLElement, bg: string) {
+  el.style.backgroundColor = bg;
+  el.style.borderColor = bg;
+  el.style.color = "#ffffff";
+  el.querySelectorAll(".fc-event-main, .fc-event-title").forEach((node) => {
+    (node as HTMLElement).style.color = "#ffffff";
+  });
+}
 
 export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
   const router = useRouter();
@@ -27,20 +48,35 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
 
   const fcEvents = useMemo(
     () =>
-      events.map((e) => ({
-        id: e.id,
-        title: `${e.platformName}: ${e.title}`,
-        start: e.start,
-        backgroundColor:
-          e.campaignColor ?? statusColors[e.status] ?? statusColors.rascunho,
-        borderColor: "transparent",
-        extendedProps: e,
-      })),
+      events.map((e) => {
+        const bg = eventBackgroundColor(e);
+        return {
+          id: e.eventSource === "instagram_media" ? `ig:${e.id}` : e.id,
+          title:
+            e.eventSource === "instagram_media"
+              ? `IG: ${e.title}`
+              : `${e.platformName}: ${e.title}`,
+          start: e.start,
+          backgroundColor: bg,
+          borderColor: bg,
+          textColor: "#ffffff",
+          classNames: [eventStatusClass(e)],
+          editable: e.eventSource === "content_post",
+          extendedProps: e,
+        };
+      }),
     [events],
   );
 
   const onEventClick = useCallback(
     (info: EventClickArg) => {
+      const props = info.event.extendedProps as CalendarPostEvent;
+      if (props.eventSource === "instagram_media") {
+        router.push(
+          `/modulos/marketing/calendario-conteudo/instagram/${encodeURIComponent(props.id)}`,
+        );
+        return;
+      }
       router.push(`/modulos/marketing/calendario-conteudo/${info.event.id}`);
     },
     [router],
@@ -48,7 +84,12 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
 
   const onEventDrop = useCallback(
     (info: EventDropArg) => {
-      const status = info.event.extendedProps.status as string;
+      const props = info.event.extendedProps as CalendarPostEvent;
+      if (props.eventSource === "instagram_media") {
+        info.revert();
+        return;
+      }
+      const status = props.status as string;
       if (["publicando", "publicado", "falhou", "cancelado"].includes(status)) {
         info.revert();
         toast.error("Este post não pode ser reagendado");
@@ -69,20 +110,18 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           info.revert();
           toast.error(String(res.error));
         } else {
-          toast.success("Post reagendado", {
-            action: {
-              label: "Desfazer",
-              onClick: () => {
-                /* user can drag again */
-              },
-            },
-          });
+          toast.success("Post reagendado");
           router.refresh();
         }
       });
     },
     [router],
   );
+
+  const onEventDidMount = useCallback((info: EventMountArg) => {
+    const props = info.event.extendedProps as CalendarPostEvent;
+    applyEventColors(info.el, eventBackgroundColor(props));
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -118,10 +157,34 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           droppable={false}
           eventClick={onEventClick}
           eventDrop={onEventDrop}
+          eventDidMount={onEventDidMount}
           height="auto"
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
         />
+      </div>
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.instagram_publicado }}
+          />
+          Publicado no Instagram (sincronizado)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.agendado }}
+          />
+          Agendado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.publicado }}
+          />
+          Publicado pela plataforma
+        </span>
       </div>
     </div>
   );

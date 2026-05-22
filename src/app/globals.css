@@ -149,9 +149,59 @@
   text-decoration: none;
 }
 
-.fc .fc-event {
+.fc .fc-daygrid-event,
+.fc .fc-timegrid-event {
   border-radius: 4px;
+  border-width: 1px;
+  border-style: solid;
   padding: 2px 4px;
   font-size: 0.75rem;
   cursor: pointer;
+}
+
+.fc .fc-daygrid-event .fc-event-main,
+.fc .fc-timegrid-event .fc-event-main {
+  color: #ffffff;
+}
+
+.fc-event-status-instagram {
+  background-color: #166534 !important;
+  border-color: #166534 !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-agendado {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-publicado {
+  background-color: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-rascunho {
+  background-color: #9ca3af !important;
+  border-color: #9ca3af !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-publicando {
+  background-color: #a855f7 !important;
+  border-color: #a855f7 !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-falhou {
+  background-color: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.fc-event-status-cancelado {
+  background-color: #6b7280 !important;
+  border-color: #6b7280 !important;
+  color: #ffffff !important;
 }
