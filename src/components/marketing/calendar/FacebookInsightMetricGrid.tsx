@@ -37,6 +37,7 @@ import {
   type FbMetricKey,
   type FbPaidMetricKey,
   type FbReactionMetricKey,
+  type FbTopMetricKey,
   type FbUnifiedOrganicKey,
   type FbUnifiedPaidKey,
   type FbVideoMetricKey,
@@ -212,7 +213,12 @@ function MetricCardWithChart({
   className,
 }: {
   label: string;
-  valueKey: FbCoreMetricKey | FbReactionMetricKey | FbVideoMetricKey | FbPaidMetricKey;
+  valueKey:
+    | FbCoreMetricKey
+    | FbTopMetricKey
+    | FbReactionMetricKey
+    | FbVideoMetricKey
+    | FbPaidMetricKey;
   history: FacebookPostInsightRow[];
   className?: string;
 }) {
