@@ -211,3 +211,37 @@
   border-color: #6b7280 !important;
   color: #ffffff !important;
 }
+
+/* Calendário de conteúdo: altura fixa por dia (~3 postagens) com rolagem */
+.content-calendar {
+  --calendar-day-events-count: 3;
+  --calendar-day-event-slot: 1.375rem;
+}
+
+.content-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
+  min-height: calc(var(--calendar-day-events-count) * var(--calendar-day-event-slot));
+  max-height: calc(var(--calendar-day-events-count) * var(--calendar-day-event-slot));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 40%, transparent)
+    transparent;
+}
+
+.content-calendar .fc-dayGridMonth-view .fc-daygrid-day-events::-webkit-scrollbar {
+  width: 4px;
+}
+
+.content-calendar .fc-dayGridMonth-view .fc-daygrid-day-events::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+}
+
+.content-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness {
+  margin-top: 2px;
+}
+
+.content-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+  display: none;
+}

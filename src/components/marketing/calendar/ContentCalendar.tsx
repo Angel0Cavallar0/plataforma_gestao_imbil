@@ -163,7 +163,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           Semana
         </button>
       </div>
-      <div className="rounded-lg border bg-card p-2">
+      <div className="content-calendar rounded-lg border bg-card p-2">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView={view}
@@ -181,6 +181,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           eventDrop={onEventDrop}
           eventDidMount={onEventDidMount}
           height="auto"
+          dayMaxEvents={false}
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
         />
