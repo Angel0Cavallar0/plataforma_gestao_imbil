@@ -67,20 +67,73 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
               </summary>
               <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-2">
                 {mod.slug === "marketing" ? (
-                  MARKETING_SUBMODULES.map((sub) => (
-                    <Link
-                      key={sub.slug}
-                      href={sub.href}
-                      className={cn(
-                        "block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                        pathname === sub.href || pathname.startsWith(sub.href + "/")
-                          ? "bg-sidebar-accent/50 text-sidebar-foreground"
-                          : "",
-                      )}
-                    >
-                      {sub.name}
-                    </Link>
-                  ))
+                  MARKETING_SUBMODULES.map((sub) =>
+                    sub.children ? (
+                      <details
+                        key={sub.slug}
+                        className="group/sub"
+                        open={
+                          pathname === sub.href || pathname.startsWith(sub.href + "/")
+                        }
+                      >
+                        <summary
+                          className={cn(
+                            "flex cursor-pointer list-none items-center rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground [&::-webkit-details-marker]:hidden",
+                            pathname === sub.href || pathname.startsWith(sub.href + "/")
+                              ? "text-sidebar-foreground"
+                              : "",
+                          )}
+                        >
+                          <span className="flex-1">{sub.name}</span>
+                          <ChevronDown className="h-3 w-3 shrink-0 transition group-open/sub:rotate-180" />
+                        </summary>
+                        <div className="ml-2 mt-1 space-y-1 border-l border-sidebar-border pl-2">
+                          {sub.children.map((child) => {
+                            // Ativo no item de maior prefixo (evita "Eventos"
+                            // aceso junto com "Leads" em /eventos/leads).
+                            const bestMatch = sub.children!.reduce(
+                              (best, c) =>
+                                (pathname === c.href ||
+                                  pathname.startsWith(c.href + "/")) &&
+                                c.href.length > (best?.href.length ?? 0)
+                                  ? c
+                                  : best,
+                              undefined as
+                                | { slug: string; name: string; href: string }
+                                | undefined,
+                            );
+                            return (
+                              <Link
+                                key={child.slug}
+                                href={child.href}
+                                className={cn(
+                                  "block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                                  bestMatch?.slug === child.slug
+                                    ? "bg-sidebar-accent/50 text-sidebar-foreground"
+                                    : "",
+                                )}
+                              >
+                                {child.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    ) : (
+                      <Link
+                        key={sub.slug}
+                        href={sub.href}
+                        className={cn(
+                          "block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                          pathname === sub.href || pathname.startsWith(sub.href + "/")
+                            ? "bg-sidebar-accent/50 text-sidebar-foreground"
+                            : "",
+                        )}
+                      >
+                        {sub.name}
+                      </Link>
+                    ),
+                  )
                 ) : (
                   <>
                     <Link
