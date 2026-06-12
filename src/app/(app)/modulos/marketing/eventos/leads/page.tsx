@@ -54,7 +54,7 @@ export default async function LeadsPage({
             Leads{selectedEvent ? ` — ${selectedEvent.name}` : ""}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Leads capturados em eventos — qualificação e passagem de bastão para o
+            Leads capturados em eventos. Qualificação e envio para o
             comercial.
           </p>
         </div>
