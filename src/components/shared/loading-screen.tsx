@@ -5,12 +5,14 @@ interface LoadingScreenProps {
   message?: string;
   className?: string;
   compact?: boolean;
+  showLogo?: boolean;
 }
 
 export function LoadingScreen({
   message = "Carregando...",
   className,
   compact = false,
+  showLogo = true,
 }: LoadingScreenProps) {
   return (
     <div
@@ -23,14 +25,16 @@ export function LoadingScreen({
         className,
       )}
     >
-      <Image
-        src="/imbil-logo.svg"
-        alt="Imbil"
-        width={compact ? 140 : 180}
-        height={compact ? 42 : 54}
-        priority
-        className="h-auto w-[140px] sm:w-[180px]"
-      />
+      {showLogo && (
+        <Image
+          src="/imbil-logo.svg"
+          alt="Imbil"
+          width={compact ? 140 : 180}
+          height={compact ? 42 : 54}
+          priority
+          className="h-auto w-[140px] sm:w-[180px]"
+        />
+      )}
       <div className="flex flex-col items-center gap-3">
         <span className="relative flex h-10 w-10 items-center justify-center">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/30" />
