@@ -9,7 +9,8 @@ const AUTH_ROUTES = [
   "/auth/confirm",
   "/auth/complete",
 ];
-const PUBLIC_PREFIXES = ["/auth/"];
+// /f/ = formulários públicos de captura de leads; /api/public/ = gravação pública
+const PUBLIC_PREFIXES = ["/auth/", "/f/", "/api/public/"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

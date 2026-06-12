@@ -2,11 +2,46 @@ import type { ContentType, PostStatus } from "@/types/marketing";
 
 export const COPY_MAX_LENGTH = 2200;
 
-export const MARKETING_SUBMODULES = [
+export type MarketingSubmodule = {
+  slug: string;
+  name: string;
+  href: string;
+  /** Itens aninhados exibidos como subgrupo no menu lateral. */
+  children?: readonly { slug: string; name: string; href: string }[];
+};
+
+export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
   {
     slug: "calendario-conteudo",
     name: "Calendário de Conteúdo",
     href: "/modulos/marketing/calendario-conteudo",
+  },
+  {
+    slug: "eventos",
+    name: "Gestão de Eventos",
+    href: "/modulos/marketing/eventos",
+    children: [
+      {
+        slug: "eventos",
+        name: "Eventos",
+        href: "/modulos/marketing/eventos",
+      },
+      {
+        slug: "eventos-formularios",
+        name: "Formulários",
+        href: "/modulos/marketing/eventos/formularios",
+      },
+      {
+        slug: "eventos-leads",
+        name: "Leads",
+        href: "/modulos/marketing/eventos/leads",
+      },
+      {
+        slug: "eventos-roi",
+        name: "ROI Evento",
+        href: "/modulos/marketing/eventos/roi",
+      },
+    ],
   },
 ] as const;
 
