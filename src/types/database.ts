@@ -34,6 +34,11 @@ export type Database = {
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
       };
+      linkedin_post_insights: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
       platforms: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;

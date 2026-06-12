@@ -171,6 +171,7 @@ export function PostForm({
   }, [isCarousel, carouselItems]);
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [linkedinSoonOpen, setLinkedinSoonOpen] = useState(false);
 
   const hashtags = useMemo(
     () =>
@@ -585,6 +586,24 @@ export function PostForm({
                   <span>{p.name}</span>
                 </label>
               ))}
+              <button
+                type="button"
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50"
+                onClick={() => setLinkedinSoonOpen(true)}
+              >
+                <input
+                  type="checkbox"
+                  className="pointer-events-none h-4 w-4 rounded border-input opacity-50"
+                  checked={false}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden
+                />
+                <span>LinkedIn</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                  Em breve
+                </span>
+              </button>
             </div>
             <p className="text-xs text-muted-foreground">
               Será criado um post por rede selecionada (mesmo conteúdo). A mesma conta
@@ -840,6 +859,26 @@ export function PostForm({
     </div>
   );
 
+  const linkedinSoonDialog = (
+    <Dialog open={linkedinSoonOpen} onOpenChange={setLinkedinSoonOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>LinkedIn em breve</DialogTitle>
+          <DialogDescription>
+            A publicação no LinkedIn pelo calendário será implementada em breve. Por
+            enquanto, os posts publicados no LinkedIn aparecem no calendário via
+            sincronização automática.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setLinkedinSoonOpen(false)}>
+            Entendi
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const discardDialog = (
     <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
       <DialogContent className="max-w-md">
@@ -890,6 +929,7 @@ export function PostForm({
           {actionButtons ? <div className="lg:col-span-2">{actionButtons}</div> : null}
         </form>
         {discardDialog}
+        {linkedinSoonDialog}
       </>
     );
   }

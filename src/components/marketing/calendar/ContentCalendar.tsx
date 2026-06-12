@@ -20,11 +20,13 @@ const statusColors: Record<string, string> = {
   cancelado: "#6b7280",
   instagram_publicado: "#166534",
   facebook_publicado: "#1e40af",
+  linkedin_publicado: "#0a66c2",
 };
 
 function eventBackgroundColor(e: CalendarPostEvent): string {
   if (e.eventSource === "instagram_media") return statusColors.instagram_publicado;
   if (e.eventSource === "facebook_post") return statusColors.facebook_publicado;
+  if (e.eventSource === "linkedin_post") return statusColors.linkedin_publicado;
   // Falha tem precedência sobre a cor da campanha: o erro precisa ficar visível.
   if (e.status === "falhou") return statusColors.falhou;
   if (e.campaignColor) return e.campaignColor;
@@ -34,6 +36,7 @@ function eventBackgroundColor(e: CalendarPostEvent): string {
 function eventStatusClass(e: CalendarPostEvent): string {
   if (e.eventSource === "instagram_media") return "fc-event-status-instagram";
   if (e.eventSource === "facebook_post") return "fc-event-status-facebook";
+  if (e.eventSource === "linkedin_post") return "fc-event-status-linkedin";
   return `fc-event-status-${e.status}`;
 }
 
@@ -60,14 +63,18 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
             ? "IG"
             : e.eventSource === "facebook_post"
               ? "FB"
-              : null;
+              : e.eventSource === "linkedin_post"
+                ? "LI"
+                : null;
         return {
           id:
             e.eventSource === "instagram_media"
               ? `ig:${e.id}`
               : e.eventSource === "facebook_post"
                 ? `fb:${e.id}`
-                : e.id,
+                : e.eventSource === "linkedin_post"
+                  ? `li:${e.id}`
+                  : e.id,
           title: syncedPrefix
             ? `${syncedPrefix}: ${e.title}`
             : `${e.platformName}: ${e.title}`,
@@ -98,6 +105,13 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
         );
         return;
       }
+      if (props.eventSource === "linkedin_post") {
+        // Sem página de detalhe (em breve): abre o post no LinkedIn.
+        if (props.permalink) {
+          window.open(props.permalink, "_blank", "noopener,noreferrer");
+        }
+        return;
+      }
       router.push(`/modulos/marketing/calendario-conteudo/${info.event.id}`);
     },
     [router],
@@ -106,10 +120,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
   const onEventDrop = useCallback(
     (info: EventDropArg) => {
       const props = info.event.extendedProps as CalendarPostEvent;
-      if (
-        props.eventSource === "instagram_media" ||
-        props.eventSource === "facebook_post"
-      ) {
+      if (props.eventSource !== "content_post") {
         info.revert();
         return;
       }
@@ -202,6 +213,13 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
             style={{ backgroundColor: statusColors.facebook_publicado }}
           />
           Publicado no Facebook (sincronizado)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.linkedin_publicado }}
+          />
+          Publicado no LinkedIn (sincronizado)
         </span>
         <span className="flex items-center gap-1.5">
           <span

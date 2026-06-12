@@ -1,6 +1,7 @@
 import { getPostsForCalendar } from "@/server/queries/marketing/content";
 import { getFacebookPostsForCalendar } from "@/server/queries/marketing/facebook-insights";
 import { getInstagramMediaForCalendar } from "@/server/queries/marketing/instagram-insights";
+import { getLinkedInPostsForCalendar } from "@/server/queries/marketing/linkedin-insights";
 import type { CalendarPostEvent } from "@/types/marketing";
 
 export async function getCalendarEvents(filters?: {
@@ -11,10 +12,11 @@ export async function getCalendarEvents(filters?: {
   campaignId?: string;
   assignedTo?: string;
 }): Promise<CalendarPostEvent[]> {
-  const [posts, instagramMedia, facebookPosts] = await Promise.all([
+  const [posts, instagramMedia, facebookPosts, linkedinPosts] = await Promise.all([
     getPostsForCalendar(filters),
     getInstagramMediaForCalendar({ from: filters?.from, to: filters?.to }),
     getFacebookPostsForCalendar({ from: filters?.from, to: filters?.to }),
+    getLinkedInPostsForCalendar({ from: filters?.from, to: filters?.to }),
   ]);
 
   const syncedExternalIds = new Set([
@@ -27,5 +29,5 @@ export async function getCalendarEvents(filters?: {
     return !syncedExternalIds.has(p.externalPostId);
   });
 
-  return [...contentEvents, ...instagramMedia, ...facebookPosts];
+  return [...contentEvents, ...instagramMedia, ...facebookPosts, ...linkedinPosts];
 }

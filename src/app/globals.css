@@ -176,6 +176,12 @@
   color: #ffffff !important;
 }
 
+.fc-event-status-linkedin {
+  background-color: #0a66c2 !important;
+  border-color: #0a66c2 !important;
+  color: #ffffff !important;
+}
+
 .fc-event-status-agendado {
   background-color: #1d4ed8 !important;
   border-color: #1d4ed8 !important;

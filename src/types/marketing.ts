@@ -140,12 +140,17 @@ export type PostWithRelations = Post & {
   assets: AssetWithPreview[];
 };
 
-export type CalendarEventSource = "content_post" | "instagram_media" | "facebook_post";
+export type CalendarEventSource =
+  | "content_post"
+  | "instagram_media"
+  | "facebook_post"
+  | "linkedin_post";
 
 export type CalendarEventStatus =
   | PostStatus
   | "instagram_publicado"
-  | "facebook_publicado";
+  | "facebook_publicado"
+  | "linkedin_publicado";
 
 export type CalendarPostEvent = {
   id: string;
@@ -159,6 +164,8 @@ export type CalendarPostEvent = {
   campaignColor: string | null;
   /** Present for content_post — used to dedupe against instagram media_id */
   externalPostId?: string | null;
+  /** Present for linkedin_post — sem página de detalhe, abre o post na rede */
+  permalink?: string | null;
 };
 
 export type InstagramMediaInsightRow = {
