@@ -12,6 +12,11 @@ export type MarketingSubmodule = {
 
 export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
   {
+    slug: "calendario-conteudo",
+    name: "Calendário de Conteúdo",
+    href: "/modulos/marketing/calendario-conteudo",
+  },
+  {
     slug: "eventos",
     name: "Gestão de Eventos",
     href: "/modulos/marketing/eventos",
@@ -37,11 +42,6 @@ export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
         href: "/modulos/marketing/eventos/roi",
       },
     ],
-  },
-  {
-    slug: "calendario-conteudo",
-    name: "Calendário de Conteúdo",
-    href: "/modulos/marketing/calendario-conteudo",
   },
 ] as const;
 
