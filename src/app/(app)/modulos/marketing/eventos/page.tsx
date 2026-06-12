@@ -13,7 +13,7 @@ export default async function EventosPage() {
         <div>
           <h1 className="text-2xl font-semibold">Eventos</h1>
           <p className="text-sm text-muted-foreground">
-            Pipeline de eventos corporativos e feiras — da negociação ao ROI.
+            Pipeline de eventos corporativos e feiras.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
