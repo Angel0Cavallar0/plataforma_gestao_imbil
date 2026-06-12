@@ -5,6 +5,15 @@ import { publishToMetaApi, type MetaCredentials, type PostForPublish } from "./m
 const BUCKET = "marketing-content-assets";
 const MAX_ATTEMPTS = 3;
 const SIGNED_URL_TTL = 15 * 60;
+const CONTENT_TYPES_REQUIRING_MEDIA = [
+  "imagem",
+  "video",
+  "carrossel",
+  "reels",
+  "story",
+];
+
+type PublishResult = { ok: boolean; error?: string; skipped?: boolean };
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -48,7 +57,7 @@ async function getMetaToken(
 async function publishPost(
   supabase: ReturnType<typeof createClient>,
   postId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<PublishResult> {
   const { data, error } = await supabase
     .schema("marketing")
     .from("content_posts")
@@ -96,14 +105,29 @@ async function publishPost(
     credentials,
   };
 
-  await supabase
+  // Claim atômico: se outra execução do cron já pegou este post (status não é
+  // mais "agendado"), pula em vez de publicar em duplicidade.
+  const { data: claimed, error: claimError } = await supabase
     .schema("marketing")
     .from("content_posts")
     .update({ status: "publicando" })
-    .eq("id", postId);
+    .eq("id", postId)
+    .eq("status", "agendado")
+    .select("id");
+  if (claimError) return { ok: false, error: claimError.message };
+  if (!claimed?.length) return { ok: true, skipped: true };
 
+  let result: { id: string };
   try {
     const token = await getMetaToken(supabase, data.credential_id, credentials);
+
+    if (
+      CONTENT_TYPES_REQUIRING_MEDIA.includes(post.content_type) &&
+      post.assets.length === 0
+    ) {
+      throw new Error("Post não possui mídia para publicar");
+    }
+
     const mediaUrls: string[] = [];
     for (const asset of post.assets) {
       const { data: signed, error: signErr } = await supabase.storage
@@ -115,28 +139,7 @@ async function publishPost(
       mediaUrls.push(signed.signedUrl);
     }
 
-    const result = await publishToMetaApi(post, token, mediaUrls);
-
-    await supabase
-      .schema("marketing")
-      .from("content_posts")
-      .update({
-        status: "publicado",
-        published_at: new Date().toISOString(),
-        external_post_id: result.id,
-        last_error_message: null,
-        last_error_code: null,
-      })
-      .eq("id", postId);
-
-    await supabase.from("audit_logs").insert({
-      action: "mkt.content_post.published",
-      resource_type: "marketing.content_post",
-      resource_id: postId,
-      metadata: { external_post_id: result.id, source: "edge_cron" },
-    });
-
-    return { ok: true };
+    result = await publishToMetaApi(post, token, mediaUrls);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     const { data: row } = await supabase
@@ -146,7 +149,7 @@ async function publishPost(
       .eq("id", postId)
       .single();
 
-    await supabase
+    const { error: failError } = await supabase
       .schema("marketing")
       .from("content_posts")
       .update({
@@ -156,16 +159,56 @@ async function publishPost(
         last_error_at: new Date().toISOString(),
       })
       .eq("id", postId);
+    if (failError) {
+      console.error(
+        `Post ${postId}: falha ao registrar erro de publicação: ${failError.message}`,
+      );
+    }
 
-    await supabase.from("audit_logs").insert({
+    const { error: auditError } = await supabase.from("audit_logs").insert({
       action: "mkt.content_post.publish_failed",
       resource_type: "marketing.content_post",
       resource_id: postId,
       metadata: { message, source: "edge_cron" },
     });
+    if (auditError) {
+      console.error(`Post ${postId}: falha ao gravar audit log: ${auditError.message}`);
+    }
 
     return { ok: false, error: message };
   }
+
+  // Publicado na Meta: a partir daqui o post não pode ir para "falhou",
+  // senão uma próxima rodada republicaria conteúdo que já está no ar.
+  const { error: successError } = await supabase
+    .schema("marketing")
+    .from("content_posts")
+    .update({
+      status: "publicado",
+      published_at: new Date().toISOString(),
+      external_post_id: result.id,
+      last_error_message: null,
+      last_error_code: null,
+    })
+    .eq("id", postId);
+
+  if (successError) {
+    const message = `Publicado na Meta (id ${result.id}), mas houve falha ao gravar o status: ${successError.message}`;
+    console.error(`Post ${postId}: ${message}`);
+    return { ok: false, error: message };
+  }
+
+  const { error: auditError } = await supabase.from("audit_logs").insert({
+    action: "mkt.content_post.published",
+    resource_type: "marketing.content_post",
+    resource_id: postId,
+    metadata: { external_post_id: result.id, source: "edge_cron" },
+  });
+  if (auditError) {
+    console.error(`Post ${postId}: falha ao gravar audit log: ${auditError.message}`);
+  }
+
+  return { ok: true };
 }
 
 Deno.serve(async (req) => {
@@ -204,7 +247,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: error.message }, 500);
   }
 
-  const results: { id: string; ok: boolean; error?: string }[] = [];
+  const results: ({ id: string } & PublishResult)[] = [];
   for (const post of posts ?? []) {
     if ((post.publish_attempts as number) >= MAX_ATTEMPTS) continue;
     const result = await publishPost(supabase, post.id as string);

@@ -65,6 +65,17 @@ export const CONTENT_TYPES_REQUIRING_COPY: ContentType[] = [
   "story",
 ];
 
+export const CONTENT_TYPES_REQUIRING_MEDIA: ContentType[] = [
+  "imagem",
+  "video",
+  "carrossel",
+  "reels",
+  "story",
+];
+
+/** Status a partir dos quais um post pode ser publicado (claim atômico). */
+export const PUBLISHABLE_FROM_STATUSES: PostStatus[] = ["agendado", "falhou"];
+
 export const MARKETING_STORAGE_BUCKET = "marketing-content-assets";
 
 /** Instagram / Facebook carrossel: mínimo e máximo de slides (Graph API). */

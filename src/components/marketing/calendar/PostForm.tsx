@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -371,7 +372,7 @@ export function PostForm({
           return;
         }
         const posts = selectedPlatformIds.map((pid) => buildPayload(form, pid));
-        const res = await createPostsBatchAction({ posts, schedule });
+        const res = await createPostsBatchAction({ posts });
         if (res.error) {
           toast.error(typeof res.error === "string" ? res.error : "Erro ao criar");
           return;
@@ -380,26 +381,52 @@ export function PostForm({
           toast.warning(res.partialErrors.join("; "));
         }
 
+        // Upload das mídias antes de agendar: agendar primeiro deixaria posts
+        // sem mídia na fila do cron.
         const ids = res.data?.ids ?? [];
-        if (isCarousel && carouselItems.length > 0 && ids.length) {
+        const mediaReadyIds: string[] = [];
+        if (isCarousel && carouselItems.length > 0) {
           for (const postId of ids) {
             const ok = await persistCarouselMedia(postId, carouselItems);
             if (!ok) break;
+            mediaReadyIds.push(postId);
           }
-        } else if (pendingFile?.size && ids.length) {
+        } else if (pendingFile?.size) {
           for (const postId of ids) {
             const fd = new FormData();
             fd.set("file", pendingFile);
             const up = await uploadAssetAction(postId, fd);
             if (up.error) toast.error(String(up.error));
+            else mediaReadyIds.push(postId);
+          }
+        } else {
+          mediaReadyIds.push(...ids);
+        }
+
+        let scheduledCount = 0;
+        if (schedule) {
+          const scheduleErrors: string[] = [];
+          for (const postId of mediaReadyIds) {
+            const sched = await schedulePostAction(postId);
+            if (sched.error) scheduleErrors.push(String(sched.error));
+            else scheduledCount++;
+          }
+          if (scheduleErrors.length) {
+            toast.error(scheduleErrors.join("; "));
           }
         }
 
-        toast.success(
-          schedule
-            ? `${ids.length} post(s) agendado(s)`
-            : `${ids.length} rascunho(s) salvo(s)`,
-        );
+        if (schedule) {
+          if (scheduledCount > 0) {
+            toast.success(`${scheduledCount} post(s) agendado(s)`);
+          } else if (ids.length) {
+            toast.warning(
+              `${ids.length} post(s) salvo(s) como rascunho — nenhum foi agendado`,
+            );
+          }
+        } else if (ids.length) {
+          toast.success(`${ids.length} rascunho(s) salvo(s)`);
+        }
         router.push("/modulos/marketing/calendario-conteudo");
         router.refresh();
         return;
@@ -652,7 +679,9 @@ export function PostForm({
             disabled={fieldDisabled}
             defaultValue={
               post?.scheduled_at
-                ? new Date(post.scheduled_at).toISOString().slice(0, 16)
+                ? // datetime-local trabalha em horário local; toISOString (UTC)
+                  // deslocaria o horário a cada salvamento.
+                  format(new Date(post.scheduled_at), "yyyy-MM-dd'T'HH:mm")
                 : ""
             }
             onChange={markDirty}

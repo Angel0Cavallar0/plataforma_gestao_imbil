@@ -9,6 +9,7 @@ import { requireMarketingPermission } from "@/lib/auth/marketing";
 import { logAction } from "@/lib/auth/audit";
 import { hasMinRole } from "@/lib/auth/permissions";
 import {
+  CONTENT_TYPES_REQUIRING_MEDIA,
   MARKETING_STORAGE_BUCKET,
   POST_STATUS_TRANSITIONS,
 } from "@/lib/constants/marketing";
@@ -82,11 +83,12 @@ export async function createPostAction(input: CreatePostInput) {
   return { data: post };
 }
 
-/** Cria um post por plataforma (mesmo conteúdo, contas distintas). */
-export async function createPostsBatchAction(input: {
-  posts: CreatePostInput[];
-  schedule: boolean;
-}) {
+/**
+ * Cria um post por plataforma (mesmo conteúdo, contas distintas).
+ * O agendamento fica a cargo do cliente, após o upload das mídias —
+ * agendar antes deixaria posts "agendado" sem mídia na fila do cron.
+ */
+export async function createPostsBatchAction(input: { posts: CreatePostInput[] }) {
   const session = await requireAuth();
   await requireMarketingPermission(session.user.id, "create");
 
@@ -106,15 +108,6 @@ export async function createPostsBatchAction(input: {
     const id = res.data?.id as string;
     if (!id) continue;
     createdIds.push(id);
-
-    if (input.schedule) {
-      const sched = await schedulePostAction(id);
-      if (sched.error) {
-        errors.push(
-          typeof sched.error === "string" ? sched.error : `Falha ao agendar post ${id}`,
-        );
-      }
-    }
   }
 
   if (!createdIds.length) {
@@ -210,14 +203,20 @@ export async function schedulePostAction(id: string) {
     return { error: "Legenda é obrigatória para agendar este tipo de post" };
   }
 
-  if (post.content_type === "carrossel") {
+  if (
+    CONTENT_TYPES_REQUIRING_MEDIA.includes(post.content_type as ContentType)
+  ) {
     const { count, error: countError } = await marketingSchema(supabase)
       .from("content_assets")
       .select("id", { count: "exact", head: true })
       .eq("post_id", id);
     if (countError) return { error: countError.message };
-    const carouselError = validateCarouselAssetCount(count ?? 0);
-    if (carouselError) return { error: carouselError };
+    if (post.content_type === "carrossel") {
+      const carouselError = validateCarouselAssetCount(count ?? 0);
+      if (carouselError) return { error: carouselError };
+    } else if (!count) {
+      return { error: "Adicione uma mídia antes de agendar" };
+    }
   }
 
   const { error } = await marketingSchema(supabase)
@@ -490,29 +489,3 @@ export async function addCommentAction(postId: string, body: string) {
   return { data };
 }
 
-/** Usado pela rota Next.js para testes manuais. Produção: Edge Function publish-scheduled-posts. */
-export async function processScheduledPostsAction() {
-  const admin = createAdminClient();
-  const now = new Date().toISOString();
-  const { data: posts } = await marketingSchema(admin)
-    .from("content_posts")
-    .select("id, publish_attempts")
-    .eq("status", "agendado")
-    .lte("scheduled_at", now);
-
-  const results: { id: string; ok: boolean; error?: string }[] = [];
-  for (const post of posts ?? []) {
-    if ((post.publish_attempts as number) >= 3) continue;
-    try {
-      await publishToMeta(post.id as string, "00000000-0000-0000-0000-000000000000");
-      results.push({ id: post.id as string, ok: true });
-    } catch (e) {
-      results.push({
-        id: post.id as string,
-        ok: false,
-        error: e instanceof Error ? e.message : "erro",
-      });
-    }
-  }
-  return results;
-}

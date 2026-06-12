@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processScheduledPostsAction } from "@/server/actions/marketing/content";
+import { processScheduledPosts } from "@/server/services/marketing/publish-scheduled";
 
 /**
  * Disparo manual / desenvolvimento da publicação agendada.
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const results = await processScheduledPostsAction();
+    const results = await processScheduledPosts();
     return NextResponse.json({
       source: "nextjs_api",
       processed: results.length,
