@@ -25,6 +25,8 @@ const statusColors: Record<string, string> = {
 function eventBackgroundColor(e: CalendarPostEvent): string {
   if (e.eventSource === "instagram_media") return statusColors.instagram_publicado;
   if (e.eventSource === "facebook_post") return statusColors.facebook_publicado;
+  // Falha tem precedência sobre a cor da campanha: o erro precisa ficar visível.
+  if (e.status === "falhou") return statusColors.falhou;
   if (e.campaignColor) return e.campaignColor;
   return statusColors[e.status] ?? statusColors.rascunho;
 }
@@ -214,6 +216,13 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
             style={{ backgroundColor: statusColors.publicado }}
           />
           Publicado pela plataforma
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.falhou }}
+          />
+          Falhou
         </span>
       </div>
     </div>

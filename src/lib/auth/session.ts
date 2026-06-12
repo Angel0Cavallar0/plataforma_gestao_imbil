@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAvatarPublicDisplayUrl } from "@/lib/storage/avatar";
+import { getAvatarSignedUrl } from "@/lib/storage/avatar";
 import { canAccessConfig, canManageUsers, isSuperadmin } from "@/lib/auth/permissions";
 import type { NavPermissions, SessionContext, UserProfile } from "@/types/auth";
 import { redirect } from "next/navigation";
@@ -27,10 +27,10 @@ export async function getSession(): Promise<SessionContext | null> {
   const role = Array.isArray(roleData) ? roleData[0] : roleData;
   if (!role) return null;
 
-  const avatarDisplayUrl = getAvatarPublicDisplayUrl(
+  const avatarDisplayUrl = await getAvatarSignedUrl(
+    supabase,
     profile.avatar_url,
     profile.id,
-    profile.updated_at,
   );
 
   const userProfile: UserProfile = {

@@ -71,6 +71,14 @@ export default async function ListaPostsPage() {
                 </td>
                 <td className="px-4 py-2">
                   <PostStatusBadge status={post.status} />
+                  {post.status === "falhou" && post.last_error_message && (
+                    <p
+                      className="mt-1 line-clamp-2 max-w-[280px] text-xs text-destructive"
+                      title={post.last_error_message}
+                    >
+                      {post.last_error_message}
+                    </p>
+                  )}
                 </td>
               </tr>
             ))}

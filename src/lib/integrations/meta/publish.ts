@@ -1,6 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { marketingSchema } from "@/lib/supabase/marketing";
-import { MARKETING_STORAGE_BUCKET } from "@/lib/constants/marketing";
+import {
+  CONTENT_TYPES_REQUIRING_MEDIA,
+  MARKETING_STORAGE_BUCKET,
+  PUBLISHABLE_FROM_STATUSES,
+} from "@/lib/constants/marketing";
 import { getMetaToken } from "@/lib/integrations/meta/credentials";
 import { deleteFromMeta } from "@/lib/integrations/meta/delete";
 import { editFacebookPostCaption } from "@/lib/integrations/meta/edit";
@@ -21,8 +25,9 @@ import {
   publishVideoFB,
 } from "@/lib/integrations/meta/facebook";
 import { sortAssetsByDisplayOrder } from "@/lib/marketing/content-assets";
+import { logPostError } from "@/lib/marketing/publish-error-log";
 import type { MetaCredentials, PostForPublish } from "@/lib/integrations/meta/types";
-import type { MetaCredentialsJson } from "@/types/marketing";
+import type { ContentType, MetaCredentialsJson } from "@/types/marketing";
 
 const SIGNED_URL_TTL_SEC = 15 * 60;
 
@@ -80,16 +85,33 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
     throw new Error("Facebook Page ID não configurado");
   }
 
-  await marketingSchema(admin)
+  // Claim atômico: evita publicação dupla quando o cron sobrepõe execuções
+  // ou concorre com "Publicar agora".
+  const { data: claimed, error: claimError } = await marketingSchema(admin)
     .from("content_posts")
     .update({ status: "publicando" })
-    .eq("id", postId);
+    .eq("id", postId)
+    .in("status", PUBLISHABLE_FROM_STATUSES)
+    .select("id");
+  if (claimError) throw new Error(claimError.message);
+  if (!claimed?.length) {
+    throw new Error(
+      "Post não está apto a publicar (status atual não permite ou já está em publicação)",
+    );
+  }
 
-  const token = await getMetaToken(post.credential_id!);
-
+  let result: { id: string; permalink_url?: string };
   try {
-    let result: { id: string; permalink_url?: string };
+    const token = await getMetaToken(post.credential_id!);
     const platform = post.platform.slug;
+
+    if (
+      CONTENT_TYPES_REQUIRING_MEDIA.includes(post.content_type as ContentType) &&
+      post.assets.length === 0
+    ) {
+      throw new Error("Post não possui mídia para publicar");
+    }
+
     const urls = await Promise.all(
       post.assets.map((a) => getSignedMediaUrl(a.storage_path)),
     );
@@ -142,27 +164,6 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
     } else {
       throw new Error(`Plataforma ${platform} não suportada para publicação`);
     }
-
-    await marketingSchema(admin)
-      .from("content_posts")
-      .update({
-        status: "publicado",
-        published_at: new Date().toISOString(),
-        external_post_id: result.id,
-        external_post_url: result.permalink_url ?? null,
-        last_error_message: null,
-        last_error_code: null,
-      })
-      .eq("id", postId);
-
-    const { logAction } = await import("@/lib/auth/audit");
-    await logAction({
-      userId,
-      action: "mkt.content_post.published",
-      resourceType: "marketing.content_post",
-      resourceId: postId,
-      metadata: { external_post_id: result.id, platform },
-    });
   } catch (err) {
     const parsed = err instanceof MetaApiError ? err.parsed : null;
     const message = err instanceof Error ? err.message : "Erro desconhecido";
@@ -173,17 +174,27 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
       .select("publish_attempts")
       .eq("id", postId)
       .single();
+    const attempt = ((row?.publish_attempts as number) ?? 0) + 1;
 
     await marketingSchema(admin)
       .from("content_posts")
       .update({
         status: "falhou",
-        publish_attempts: (row?.publish_attempts ?? 0) + 1,
+        publish_attempts: attempt,
         last_error_message: message,
         last_error_code: code,
         last_error_at: new Date().toISOString(),
       })
       .eq("id", postId);
+
+    await logPostError({
+      postId,
+      stage: "publicacao",
+      message,
+      code,
+      attempt,
+      userId,
+    });
 
     if (parsed?.shouldInvalidateCredential && post.credential_id) {
       await marketingSchema(admin)
@@ -202,6 +213,35 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
     });
     throw err;
   }
+
+  // Publicado na Meta: a partir daqui o post não pode ir para "falhou",
+  // senão o cron republicaria um conteúdo que já está no ar.
+  const { error: successError } = await marketingSchema(admin)
+    .from("content_posts")
+    .update({
+      status: "publicado",
+      published_at: new Date().toISOString(),
+      external_post_id: result.id,
+      external_post_url: result.permalink_url ?? null,
+      last_error_message: null,
+      last_error_code: null,
+    })
+    .eq("id", postId);
+
+  if (successError) {
+    const message = `Post publicado na Meta (id ${result.id}), mas houve falha ao gravar o status: ${successError.message}`;
+    await logPostError({ postId, stage: "publicacao", message, userId });
+    throw new Error(message);
+  }
+
+  const { logAction } = await import("@/lib/auth/audit");
+  await logAction({
+    userId,
+    action: "mkt.content_post.published",
+    resourceType: "marketing.content_post",
+    resourceId: postId,
+    metadata: { external_post_id: result.id, platform: post.platform.slug },
+  });
 }
 
 export async function editMetaPost(

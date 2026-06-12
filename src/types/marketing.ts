@@ -66,6 +66,18 @@ export type Post = {
   updated_at: string;
 };
 
+export type PostErrorLog = {
+  id: string;
+  post_id: string;
+  stage: "agendamento" | "publicacao";
+  source: "app" | "edge_cron";
+  error_message: string;
+  error_code: string | null;
+  attempt: number | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type Asset = {
   id: string;
   post_id: string;

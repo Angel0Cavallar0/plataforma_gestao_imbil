@@ -29,24 +29,26 @@ export function parseAvatarStoragePath(
   return `${userId}/avatar.png`;
 }
 
-/** URL pública com cache-bust para exibição no cliente. */
-export function getAvatarPublicDisplayUrl(
+/**
+ * URL assinada de curta duração para exibir o avatar.
+ * O bucket é privado, então a leitura exige uma URL assinada gerada no servidor
+ * por um usuário autenticado (evita exposição pública do arquivo).
+ */
+export async function getAvatarSignedUrl(
+  supabase: SupabaseClient,
   avatarUrl: string | null | undefined,
   userId: string,
-  cacheVersion?: string | number | null,
-): string | null {
+  expiresInSeconds = 60 * 60,
+): Promise<string | null> {
   const path = parseAvatarStoragePath(avatarUrl, userId);
   if (!path) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  if (!baseUrl) return null;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, expiresInSeconds);
 
-  const version =
-    cacheVersion != null && cacheVersion !== ""
-      ? encodeURIComponent(String(cacheVersion))
-      : String(Date.now());
-
-  return `${baseUrl}/storage/v1/object/public/${BUCKET}/${path}?v=${version}`;
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
 }
 
 /** Remove outros arquivos da pasta do usuário, mantendo apenas o path atual. */

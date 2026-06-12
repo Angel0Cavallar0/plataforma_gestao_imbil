@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth/session";
-import { getAvatarPublicDisplayUrl } from "@/lib/storage/avatar";
+import { getAvatarSignedUrl } from "@/lib/storage/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { parseAddressFromJson } from "@/lib/profile/parse-address";
 import { ProfileReadOnlyCard } from "@/components/profile/profile-read-only-card";
@@ -63,10 +63,10 @@ export default async function PerfilPage() {
     managerName = manager?.full_name ?? null;
   }
 
-  const avatarDisplayUrl = getAvatarPublicDisplayUrl(
+  const avatarDisplayUrl = await getAvatarSignedUrl(
+    supabase,
     profile.avatar_url,
     session.profile.id,
-    profile.updated_at,
   );
 
   return (

@@ -3,7 +3,7 @@
 import { requireAuth } from "@/lib/auth/session";
 import { logAction } from "@/lib/auth/audit";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/constants";
-import { getAvatarPublicDisplayUrl, removeStaleAvatarFiles } from "@/lib/storage/avatar";
+import { getAvatarSignedUrl, removeStaleAvatarFiles } from "@/lib/storage/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { avatarFileSchema, parseMyProfileFormData } from "@/lib/validations/profile";
 import { z } from "zod";
@@ -122,7 +122,7 @@ export async function uploadAvatarAction(formData: FormData) {
 
   if (profileError) return { error: profileError.message };
 
-  const avatarUrl = getAvatarPublicDisplayUrl(path, session.profile.id, updatedAt);
+  const avatarUrl = await getAvatarSignedUrl(supabase, path, session.profile.id);
 
   await logAction({
     userId: session.profile.id,
