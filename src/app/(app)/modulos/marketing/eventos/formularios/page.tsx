@@ -24,7 +24,7 @@ export default async function FormulariosPage({
         <div>
           <h1 className="text-2xl font-semibold">Formulários de captura</h1>
           <p className="text-sm text-muted-foreground">
-            Formulários públicos de captura de leads, com link expirável e QR Code.
+            Criação, edição e publicação de formulários de captura de leads em eventos.
           </p>
         </div>
         <Link
