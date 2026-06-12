@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth/supabase-email";
 import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import type { RoleSlug } from "@/lib/constants";
 
 export async function createUserAction(formData: FormData) {
@@ -500,12 +501,20 @@ export async function getUserAuditLogsAction(userId: string, limit = 30) {
     return { error: "Sem permissão." };
   }
 
+  const parsedId = z.string().uuid().safeParse(userId);
+  if (!parsedId.success) {
+    return { error: "Identificador inválido." };
+  }
+  const safeUserId = parsedId.data;
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("audit_logs")
     .select("id, action, resource_type, resource_id, created_at, ip_address")
-    .or(`user_id.eq.${userId},and(resource_type.eq.profile,resource_id.eq.${userId})`)
+    .or(
+      `user_id.eq.${safeUserId},and(resource_type.eq.profile,resource_id.eq.${safeUserId})`,
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
 
