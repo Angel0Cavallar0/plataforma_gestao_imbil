@@ -19,16 +19,19 @@ const statusColors: Record<string, string> = {
   falhou: "#ef4444",
   cancelado: "#6b7280",
   instagram_publicado: "#166534",
+  facebook_publicado: "#1e40af",
 };
 
 function eventBackgroundColor(e: CalendarPostEvent): string {
   if (e.eventSource === "instagram_media") return statusColors.instagram_publicado;
+  if (e.eventSource === "facebook_post") return statusColors.facebook_publicado;
   if (e.campaignColor) return e.campaignColor;
   return statusColors[e.status] ?? statusColors.rascunho;
 }
 
 function eventStatusClass(e: CalendarPostEvent): string {
   if (e.eventSource === "instagram_media") return "fc-event-status-instagram";
+  if (e.eventSource === "facebook_post") return "fc-event-status-facebook";
   return `fc-event-status-${e.status}`;
 }
 
@@ -50,12 +53,22 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
     () =>
       events.map((e) => {
         const bg = eventBackgroundColor(e);
+        const syncedPrefix =
+          e.eventSource === "instagram_media"
+            ? "IG"
+            : e.eventSource === "facebook_post"
+              ? "FB"
+              : null;
         return {
-          id: e.eventSource === "instagram_media" ? `ig:${e.id}` : e.id,
-          title:
+          id:
             e.eventSource === "instagram_media"
-              ? `IG: ${e.title}`
-              : `${e.platformName}: ${e.title}`,
+              ? `ig:${e.id}`
+              : e.eventSource === "facebook_post"
+                ? `fb:${e.id}`
+                : e.id,
+          title: syncedPrefix
+            ? `${syncedPrefix}: ${e.title}`
+            : `${e.platformName}: ${e.title}`,
           start: e.start,
           backgroundColor: bg,
           borderColor: bg,
@@ -77,6 +90,12 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
         );
         return;
       }
+      if (props.eventSource === "facebook_post") {
+        router.push(
+          `/modulos/marketing/calendario-conteudo/facebook/${encodeURIComponent(props.id)}`,
+        );
+        return;
+      }
       router.push(`/modulos/marketing/calendario-conteudo/${info.event.id}`);
     },
     [router],
@@ -85,7 +104,10 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
   const onEventDrop = useCallback(
     (info: EventDropArg) => {
       const props = info.event.extendedProps as CalendarPostEvent;
-      if (props.eventSource === "instagram_media") {
+      if (
+        props.eventSource === "instagram_media" ||
+        props.eventSource === "facebook_post"
+      ) {
         info.revert();
         return;
       }
@@ -141,7 +163,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           Semana
         </button>
       </div>
-      <div className="rounded-lg border bg-card p-2">
+      <div className="content-calendar rounded-lg border bg-card p-2">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView={view}
@@ -159,6 +181,7 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           eventDrop={onEventDrop}
           eventDidMount={onEventDidMount}
           height="auto"
+          dayMaxEvents={false}
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
         />
@@ -170,6 +193,13 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
             style={{ backgroundColor: statusColors.instagram_publicado }}
           />
           Publicado no Instagram (sincronizado)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-sm"
+            style={{ backgroundColor: statusColors.facebook_publicado }}
+          />
+          Publicado no Facebook (sincronizado)
         </span>
         <span className="flex items-center gap-1.5">
           <span

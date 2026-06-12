@@ -107,10 +107,15 @@ export function InstagramPublishedPreview({
   mediaId,
   latest,
   carouselItems,
+  captionOverride,
+  mediaSubLabel,
 }: {
   mediaId: string;
   latest: InstagramMediaInsightRow;
   carouselItems: InstagramCarouselChild[];
+  /** Legenda exibida no rodapé (ex.: texto do Facebook em cross-post). */
+  captionOverride?: string | null;
+  mediaSubLabel?: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const hasCarouselChildren = carouselItems.length > 0;
@@ -118,7 +123,10 @@ export function InstagramPublishedPreview({
     hasCarouselChildren || isCarouselType(latest.media_type, latest.media_product_type);
   const isVideo = isVideoType(latest.media_type, latest.media_product_type);
 
-  const caption = latest.caption ?? "";
+  const caption =
+    captionOverride !== undefined && captionOverride !== null
+      ? captionOverride
+      : (latest.caption ?? "");
   const lines = caption.trim().split("\n");
   const firstLine = lines[0] ?? "";
   const rest = lines.slice(1).join("\n");
@@ -165,11 +173,12 @@ export function InstagramPublishedPreview({
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold">{ACCOUNT_LABEL}</p>
           <p className="text-[10px] text-neutral-500">
-            {isCarousel
-              ? "Carrossel"
-              : latest.media_product_type === "REELS"
-                ? "Reels"
-                : "Publicação"}
+            {mediaSubLabel ??
+              (isCarousel
+                ? "Carrossel"
+                : latest.media_product_type === "REELS"
+                  ? "Reels"
+                  : "Publicação")}
           </p>
         </div>
       </div>
