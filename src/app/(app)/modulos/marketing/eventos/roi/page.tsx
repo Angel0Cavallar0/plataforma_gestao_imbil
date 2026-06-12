@@ -50,8 +50,7 @@ export default async function RoiEventoPage() {
         <h1 className="text-2xl font-semibold">ROI Evento</h1>
         <p className="text-sm text-muted-foreground">
           Performance dos eventos com status <strong>realizado</strong>. ROI estimado =
-          leads qualificados × valor estimado por lead (até o Módulo Comercial trazer
-          receita real).
+          leads qualificados × valor estimado por lead (até implementação do módulo comercial).
         </p>
       </div>
 
