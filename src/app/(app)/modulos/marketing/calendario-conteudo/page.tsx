@@ -15,7 +15,7 @@ export default async function CalendarioConteudoPage() {
         <div>
           <h1 className="text-2xl font-semibold">Calendário de Conteúdo</h1>
           <p className="text-sm text-muted-foreground">
-            Planeje, agende e publique com legenda nas redes sociais.
+            Planeje, agende e publique nas redes sociais.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
