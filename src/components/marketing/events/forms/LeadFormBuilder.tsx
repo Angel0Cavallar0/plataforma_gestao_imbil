@@ -508,8 +508,12 @@ export function LeadFormBuilder({ events, form, defaultEventId }: LeadFormBuilde
 
       <aside className="space-y-2 xl:sticky xl:top-6">
         <h2 className="text-sm font-semibold">Preview (renderização real)</h2>
-        <div className="pointer-events-none max-h-[70dvh] overflow-y-auto rounded-lg border">
-          <PublicLeadForm form={previewData} slug="preview" token="preview" />
+        {/* O scroll fica no wrapper externo; pointer-events-none só no conteúdo,
+            senão o mouse não consegue rolar o preview. */}
+        <div className="max-h-[70dvh] overflow-y-auto rounded-lg border">
+          <div className="pointer-events-none">
+            <PublicLeadForm form={previewData} slug="preview" token="preview" />
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
           Atualiza em tempo real conforme você edita. Checkbox de consentimento: “

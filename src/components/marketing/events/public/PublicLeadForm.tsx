@@ -119,7 +119,7 @@ export function PublicLeadForm({ form, slug, token }: PublicLeadFormProps) {
   }
 
   return (
-    <div className="min-h-dvh overflow-y-auto bg-slate-50">
+    <div className="min-h-dvh bg-slate-50">
       <div className="mx-auto max-w-lg px-4 py-8">
         <div className="mb-6 text-center">
           <Image
