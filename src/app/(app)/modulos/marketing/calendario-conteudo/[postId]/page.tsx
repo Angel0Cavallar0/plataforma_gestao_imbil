@@ -5,6 +5,7 @@ import {
   getCampaigns,
   getMetaCredentials,
   getPostById,
+  listPostErrorLogs,
 } from "@/server/queries/marketing/content";
 
 export default async function PostDetailPage({
@@ -13,11 +14,12 @@ export default async function PostDetailPage({
   params: Promise<{ postId: string }>;
 }) {
   const { postId } = await params;
-  const [post, platforms, campaigns, credentials] = await Promise.all([
+  const [post, platforms, campaigns, credentials, errorLogs] = await Promise.all([
     getPostById(postId),
     getActivePlatforms(),
     getCampaigns(),
     getMetaCredentials(),
+    listPostErrorLogs(postId),
   ]);
 
   if (!post) notFound();
@@ -29,6 +31,7 @@ export default async function PostDetailPage({
   return (
     <PostDetailShell
       post={post}
+      errorLogs={errorLogs}
       platforms={socialPlatforms}
       campaigns={campaigns.map((c) => ({ id: c.id, name: c.name }))}
       credentials={credentials.map((c) => ({

@@ -25,6 +25,7 @@ import {
   publishVideoFB,
 } from "@/lib/integrations/meta/facebook";
 import { sortAssetsByDisplayOrder } from "@/lib/marketing/content-assets";
+import { logPostError } from "@/lib/marketing/publish-error-log";
 import type { MetaCredentials, PostForPublish } from "@/lib/integrations/meta/types";
 import type { ContentType, MetaCredentialsJson } from "@/types/marketing";
 
@@ -173,17 +174,27 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
       .select("publish_attempts")
       .eq("id", postId)
       .single();
+    const attempt = ((row?.publish_attempts as number) ?? 0) + 1;
 
     await marketingSchema(admin)
       .from("content_posts")
       .update({
         status: "falhou",
-        publish_attempts: (row?.publish_attempts ?? 0) + 1,
+        publish_attempts: attempt,
         last_error_message: message,
         last_error_code: code,
         last_error_at: new Date().toISOString(),
       })
       .eq("id", postId);
+
+    await logPostError({
+      postId,
+      stage: "publicacao",
+      message,
+      code,
+      attempt,
+      userId,
+    });
 
     if (parsed?.shouldInvalidateCredential && post.credential_id) {
       await marketingSchema(admin)
@@ -218,9 +229,9 @@ export async function publishToMeta(postId: string, userId: string): Promise<voi
     .eq("id", postId);
 
   if (successError) {
-    throw new Error(
-      `Post publicado na Meta (id ${result.id}), mas houve falha ao gravar o status: ${successError.message}`,
-    );
+    const message = `Post publicado na Meta (id ${result.id}), mas houve falha ao gravar o status: ${successError.message}`;
+    await logPostError({ postId, stage: "publicacao", message, userId });
+    throw new Error(message);
   }
 
   const { logAction } = await import("@/lib/auth/audit");

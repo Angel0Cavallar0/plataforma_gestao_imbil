@@ -9,6 +9,7 @@ import type {
   ContentKpis,
   Platform,
   Post,
+  PostErrorLog,
   PostWithRelations,
 } from "@/types/marketing";
 
@@ -144,6 +145,25 @@ export async function listPosts(filters?: {
   const { data, error } = await q.order("scheduled_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Post[];
+}
+
+export async function listPostErrorLogs(
+  postId: string,
+  limit = 5,
+): Promise<PostErrorLog[]> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("content_post_error_logs")
+    .select("*")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    // Histórico é auxiliar: não derruba a página de detalhe (ex.: migration 014 pendente)
+    console.error(`Falha ao listar logs de erro do post ${postId}: ${error.message}`);
+    return [];
+  }
+  return (data ?? []) as PostErrorLog[];
 }
 
 export async function getContentKpis(): Promise<ContentKpis> {

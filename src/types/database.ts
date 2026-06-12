@@ -29,6 +29,11 @@ export type Database = {
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
       };
+      content_post_error_logs: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
       platforms: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;

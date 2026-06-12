@@ -6,19 +6,27 @@ import { Button } from "@/components/ui/button";
 import { PostForm } from "@/components/marketing/calendar/PostForm";
 import { PostStatusBadge } from "@/components/marketing/calendar/PostStatusBadge";
 import { PostDetailActions } from "@/components/marketing/calendar/PostDetailActions";
+import { PostErrorAlert } from "@/components/marketing/calendar/PostErrorAlert";
 import { CONTENT_TYPE_LABELS } from "@/lib/constants/marketing";
-import type { Platform, PostWithRelations } from "@/types/marketing";
+import type { Platform, PostErrorLog, PostWithRelations } from "@/types/marketing";
 
 type Props = {
   post: PostWithRelations;
   platforms: Platform[];
   campaigns: { id: string; name: string }[];
   credentials: { id: string; label: string; platform_id: string }[];
+  errorLogs?: PostErrorLog[];
 };
 
 const EDITABLE_STATUSES = new Set(["agendado", "falhou"]);
 
-export function PostDetailShell({ post, platforms, campaigns, credentials }: Props) {
+export function PostDetailShell({
+  post,
+  platforms,
+  campaigns,
+  credentials,
+  errorLogs = [],
+}: Props) {
   const [isEditing, setIsEditing] = useState(post.status === "rascunho");
   const [formKey, setFormKey] = useState(0);
 
@@ -71,6 +79,8 @@ export function PostDetailShell({ post, platforms, campaigns, credentials }: Pro
         </div>
         <p className="mt-4 text-sm text-muted-foreground">{helpText}</p>
       </div>
+
+      <PostErrorAlert post={post} errorLogs={errorLogs} />
 
       <PostForm
         key={formKey}

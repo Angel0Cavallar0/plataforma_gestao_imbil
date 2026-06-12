@@ -1,9 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { marketingSchema } from "@/lib/supabase/marketing";
 import { publishToMeta } from "@/lib/integrations/meta/publish";
+import { CRON_ACTOR_ID } from "@/lib/marketing/publish-error-log";
 
 const MAX_ATTEMPTS = 3;
-const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
  * Publica os posts agendados vencidos. Usado pela rota /api/cron para testes

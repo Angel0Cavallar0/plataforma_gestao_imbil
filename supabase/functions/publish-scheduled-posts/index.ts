@@ -54,6 +54,27 @@ async function getMetaToken(
   return data as string;
 }
 
+async function logPostError(
+  supabase: ReturnType<typeof createClient>,
+  postId: string,
+  message: string,
+  attempt?: number,
+) {
+  const { error } = await supabase
+    .schema("marketing")
+    .from("content_post_error_logs")
+    .insert({
+      post_id: postId,
+      stage: "publicacao",
+      source: "edge_cron",
+      error_message: message,
+      attempt: attempt ?? null,
+    });
+  if (error) {
+    console.error(`Post ${postId}: falha ao gravar log de erro: ${error.message}`);
+  }
+}
+
 async function publishPost(
   supabase: ReturnType<typeof createClient>,
   postId: string,
@@ -148,13 +169,14 @@ async function publishPost(
       .select("publish_attempts")
       .eq("id", postId)
       .single();
+    const attempt = ((row?.publish_attempts as number) ?? 0) + 1;
 
     const { error: failError } = await supabase
       .schema("marketing")
       .from("content_posts")
       .update({
         status: "falhou",
-        publish_attempts: (row?.publish_attempts ?? 0) + 1,
+        publish_attempts: attempt,
         last_error_message: message,
         last_error_at: new Date().toISOString(),
       })
@@ -164,6 +186,8 @@ async function publishPost(
         `Post ${postId}: falha ao registrar erro de publicação: ${failError.message}`,
       );
     }
+
+    await logPostError(supabase, postId, message, attempt);
 
     const { error: auditError } = await supabase.from("audit_logs").insert({
       action: "mkt.content_post.publish_failed",
@@ -195,6 +219,7 @@ async function publishPost(
   if (successError) {
     const message = `Publicado na Meta (id ${result.id}), mas houve falha ao gravar o status: ${successError.message}`;
     console.error(`Post ${postId}: ${message}`);
+    await logPostError(supabase, postId, message);
     return { ok: false, error: message };
   }
 

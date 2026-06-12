@@ -14,6 +14,7 @@ import {
   POST_STATUS_TRANSITIONS,
 } from "@/lib/constants/marketing";
 import { validateCarouselAssetCount } from "@/lib/marketing/content-assets";
+import { logPostError } from "@/lib/marketing/publish-error-log";
 import {
   changeStatusSchema,
   createCampaignSchema,
@@ -184,7 +185,19 @@ export async function updatePostAction(input: UpdatePostInput) {
   return { data: post };
 }
 
-export async function schedulePostAction(id: string) {
+type ScheduleResult = { ok: true; error?: undefined } | { ok?: undefined; error: string };
+
+/** Registra a falha de agendamento e devolve o erro para a UI. */
+async function failSchedule(
+  postId: string,
+  userId: string,
+  message: string,
+): Promise<ScheduleResult> {
+  await logPostError({ postId, stage: "agendamento", message, userId });
+  return { error: message };
+}
+
+export async function schedulePostAction(id: string): Promise<ScheduleResult> {
   const session = await requireAuth();
   await requireMarketingPermission(session.user.id, "update");
   const supabase = await createClient();
@@ -197,10 +210,14 @@ export async function schedulePostAction(id: string) {
 
   if (!post) return { error: "Post não encontrado" };
   if (!POST_STATUS_TRANSITIONS[post.status as PostStatus]?.includes("agendado")) {
-    return { error: "Transição de status inválida" };
+    return failSchedule(id, session.user.id, "Transição de status inválida");
   }
   if (requiresCopyForPublish(post.content_type as ContentType) && !post.copy?.trim()) {
-    return { error: "Legenda é obrigatória para agendar este tipo de post" };
+    return failSchedule(
+      id,
+      session.user.id,
+      "Legenda é obrigatória para agendar este tipo de post",
+    );
   }
 
   if (
@@ -210,12 +227,12 @@ export async function schedulePostAction(id: string) {
       .from("content_assets")
       .select("id", { count: "exact", head: true })
       .eq("post_id", id);
-    if (countError) return { error: countError.message };
+    if (countError) return failSchedule(id, session.user.id, countError.message);
     if (post.content_type === "carrossel") {
       const carouselError = validateCarouselAssetCount(count ?? 0);
-      if (carouselError) return { error: carouselError };
+      if (carouselError) return failSchedule(id, session.user.id, carouselError);
     } else if (!count) {
-      return { error: "Adicione uma mídia antes de agendar" };
+      return failSchedule(id, session.user.id, "Adicione uma mídia antes de agendar");
     }
   }
 
@@ -224,7 +241,7 @@ export async function schedulePostAction(id: string) {
     .update({ status: "agendado" })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return failSchedule(id, session.user.id, error.message);
   revalidateCalendar();
   return { ok: true };
 }
@@ -269,7 +286,10 @@ export async function changePostStatusAction(id: string, toStatus: PostStatus) {
   return { ok: true };
 }
 
-export async function reschedulePostAction(input: { id: string; scheduled_at: Date }) {
+export async function reschedulePostAction(input: {
+  id: string;
+  scheduled_at: Date;
+}): Promise<ScheduleResult> {
   const session = await requireAuth();
   await requireMarketingPermission(session.user.id, "update");
   const { id, scheduled_at } = reschedulePostSchema.parse(input);
@@ -284,7 +304,7 @@ export async function reschedulePostAction(input: { id: string; scheduled_at: Da
   if (!post) return { error: "Post não encontrado" };
   const blocked: PostStatus[] = ["publicando", "publicado", "falhou", "cancelado"];
   if (blocked.includes(post.status as PostStatus)) {
-    return { error: "Este post não pode ser reagendado" };
+    return failSchedule(id, session.user.id, "Este post não pode ser reagendado");
   }
 
   const { error } = await marketingSchema(supabase)
@@ -292,7 +312,7 @@ export async function reschedulePostAction(input: { id: string; scheduled_at: Da
     .update({ scheduled_at: scheduled_at.toISOString(), status: "agendado" })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return failSchedule(id, session.user.id, error.message);
   revalidateCalendar();
   return { ok: true };
 }
