@@ -106,10 +106,9 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
         return;
       }
       if (props.eventSource === "linkedin_post") {
-        // Sem página de detalhe (em breve): abre o post no LinkedIn.
-        if (props.permalink) {
-          window.open(props.permalink, "_blank", "noopener,noreferrer");
-        }
+        router.push(
+          `/modulos/marketing/calendario-conteudo/linkedin/${encodeURIComponent(props.id)}`,
+        );
         return;
       }
       router.push(`/modulos/marketing/calendario-conteudo/${info.event.id}`);

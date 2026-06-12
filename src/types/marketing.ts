@@ -164,8 +164,28 @@ export type CalendarPostEvent = {
   campaignColor: string | null;
   /** Present for content_post — used to dedupe against instagram media_id */
   externalPostId?: string | null;
-  /** Present for linkedin_post — sem página de detalhe, abre o post na rede */
-  permalink?: string | null;
+};
+
+export type LinkedInPostInsightRow = {
+  id: string;
+  post_id: string;
+  data_referencia: string;
+  published_at: string | null;
+  post_type: string | null;
+  text: string | null;
+  permalink: string | null;
+  thumbnail_url: string | null;
+  impressions: number | null;
+  unique_impressions: number | null;
+  clicks: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  engagement: number | null;
+  video_views: number | null;
+  video_completions: number | null;
+  video_view_rate: number | null;
+  coletado_em: string;
 };
 
 export type InstagramMediaInsightRow = {

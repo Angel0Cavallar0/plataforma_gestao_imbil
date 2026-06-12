@@ -1,12 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { marketingSchema } from "@/lib/supabase/marketing";
-import type { CalendarPostEvent } from "@/types/marketing";
-
-function truncateText(text: string | null, max = 60): string {
-  if (!text?.trim()) return "Publicação LinkedIn";
-  const line = text.trim().split("\n")[0] ?? "";
-  return line.length > max ? `${line.slice(0, max)}…` : line;
-}
+import { truncateText } from "@/lib/marketing/linkedin-insights";
+import type { CalendarPostEvent, LinkedInPostInsightRow } from "@/types/marketing";
 
 /**
  * Posts do LinkedIn sincronizados (snapshots diários em linkedin_post_insights).
@@ -51,9 +46,38 @@ export async function getLinkedInPostsForCalendar(filters?: {
       platformName: "LinkedIn",
       platformColor: "#0A66C2",
       campaignColor: null,
-      permalink: (row.permalink as string | null) ?? null,
     });
   }
 
   return events;
+}
+
+export async function getLinkedInPostInsightHistory(
+  postId: string,
+): Promise<LinkedInPostInsightRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("linkedin_post_insights")
+    .select("*")
+    .eq("post_id", postId)
+    .order("data_referencia", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as LinkedInPostInsightRow[];
+}
+
+export async function getLinkedInPostLatest(
+  postId: string,
+): Promise<LinkedInPostInsightRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("linkedin_post_insights")
+    .select("*")
+    .eq("post_id", postId)
+    .order("data_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as LinkedInPostInsightRow | null) ?? null;
 }
