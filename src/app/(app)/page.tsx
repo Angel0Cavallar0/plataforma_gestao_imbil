@@ -9,7 +9,7 @@ export default async function HomePage() {
       <div>
         <h1 className="text-2xl font-semibold">Bem-vindo, {session.profile.full_name}</h1>
         <p className="text-muted-foreground">
-          Plataforma de Gestão Imbil — Command Center
+          Plataforma de Gestão Imbil (Command Center)
         </p>
       </div>
       <Card>
