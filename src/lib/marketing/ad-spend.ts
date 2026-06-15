@@ -9,12 +9,18 @@ export function toIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Período padrão: últimos 30 dias (incluindo hoje). */
+/** Converte "yyyy-mm-dd" em Date local (sem deslocamento de fuso). */
+export function fromIsoDate(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+/** Período padrão: mês atual (do primeiro ao último dia). */
 export function defaultDateRange(): { date_from: string; date_to: string } {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 29);
-  return { date_from: toIsoDate(from), date_to: toIsoDate(to) };
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { date_from: toIsoDate(first), date_to: toIsoDate(last) };
 }
 
 type RawSearchParams = Record<string, string | string[] | undefined>;

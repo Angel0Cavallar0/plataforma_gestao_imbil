@@ -1,18 +1,29 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-import { Search } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { CalendarDays, Check, Loader2, Search, X } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AD_PLATFORMS, AD_PLATFORM_SLUGS } from "@/lib/constants/marketing-ads";
+import { defaultDateRange, fromIsoDate, toIsoDate } from "@/lib/marketing/ad-spend";
 import type { AdPlatformSlug, AdSpendFilters as Filters } from "@/types/marketing-ads";
 
+function rangeFromFilters(filters: Filters): DateRange {
+  return { from: fromIsoDate(filters.date_from), to: fromIsoDate(filters.date_to) };
+}
+
 /**
- * Filtros compartilhados (período, plataformas, busca). Escreve nos
- * searchParams da rota — os Server Components reagem ao mudar a URL.
- * O filtro de plataforma fica oculto na visão por plataforma.
+ * Filtros compartilhados (período, plataformas, busca). As alterações ficam em
+ * estado local e só são aplicadas (gravadas na URL) ao clicar em "Aplicar".
+ * Usa o calendário shadcn (range) num popover. O filtro de plataforma fica
+ * oculto na visão por plataforma.
  */
 export function AdSpendFilters({
   filters,
@@ -23,80 +34,117 @@ export function AdSpendFilters({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const search = useSearchParams();
   const [pending, startTransition] = useTransition();
 
-  function update(patch: Record<string, string | null>) {
-    const params = new URLSearchParams(search.toString());
-    for (const [key, value] of Object.entries(patch)) {
-      if (value == null || value === "") params.delete(key);
-      else params.set(key, value);
-    }
-    startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  const [range, setRange] = useState<DateRange | undefined>(rangeFromFilters(filters));
+  const [search, setSearch] = useState(filters.search ?? "");
+  const [platforms, setPlatforms] = useState<Set<AdPlatformSlug>>(
+    new Set(filters.platforms ?? AD_PLATFORM_SLUGS),
+  );
+  const [open, setOpen] = useState(false);
+
+  // Ressincroniza o estado local quando os filtros aplicados mudam (ex.:
+  // navegação por voltar/avançar). Padrão "ajustar estado ao mudar prop":
+  // setState durante a renderização, sem useEffect.
+  const appliedKey = `${filters.date_from}|${filters.date_to}|${filters.search ?? ""}|${(filters.platforms ?? []).join(",")}`;
+  const [prevKey, setPrevKey] = useState(appliedKey);
+  if (appliedKey !== prevKey) {
+    setPrevKey(appliedKey);
+    setRange(rangeFromFilters(filters));
+    setSearch(filters.search ?? "");
+    setPlatforms(new Set(filters.platforms ?? AD_PLATFORM_SLUGS));
+  }
+
+  function togglePlatform(slug: AdPlatformSlug) {
+    setPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next.size === 0 ? new Set(AD_PLATFORM_SLUGS) : next;
     });
   }
 
-  const selected = new Set(filters.platforms ?? AD_PLATFORM_SLUGS);
-
-  function togglePlatform(slug: AdPlatformSlug) {
-    const next = new Set(selected);
-    if (next.has(slug)) next.delete(slug);
-    else next.add(slug);
-    // Todas selecionadas => remove o filtro (estado padrão).
-    if (next.size === 0 || next.size === AD_PLATFORM_SLUGS.length) {
-      update({ platforms: null });
-    } else {
-      update({ platforms: [...next].join(",") });
+  function apply() {
+    const params = new URLSearchParams();
+    if (range?.from) params.set("date_from", toIsoDate(range.from));
+    const end = range?.to ?? range?.from;
+    if (end) params.set("date_to", toIsoDate(end));
+    if (search.trim()) params.set("search", search.trim());
+    if (showPlatformFilter && platforms.size !== AD_PLATFORM_SLUGS.length) {
+      params.set("platforms", [...platforms].join(","));
     }
+    const qs = params.toString();
+    startTransition(() =>
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false }),
+    );
   }
 
-  return (
-    <div
-      className="flex flex-wrap items-end gap-3"
-      data-pending={pending ? "" : undefined}
-    >
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-        De
-        <Input
-          type="date"
-          value={filters.date_from}
-          max={filters.date_to}
-          onChange={(e) => update({ date_from: e.target.value })}
-          className="h-9 w-40"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-        Até
-        <Input
-          type="date"
-          value={filters.date_to}
-          min={filters.date_from}
-          onChange={(e) => update({ date_to: e.target.value })}
-          className="h-9 w-40"
-        />
-      </label>
+  function clear() {
+    const d = defaultDateRange();
+    setRange({ from: fromIsoDate(d.date_from), to: fromIsoDate(d.date_to) });
+    setSearch("");
+    setPlatforms(new Set(AD_PLATFORM_SLUGS));
+    startTransition(() => router.push(pathname, { scroll: false }));
+  }
 
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+  const rangeLabel =
+    range?.from && range?.to
+      ? `${format(range.from, "dd/MM/yyyy", { locale: ptBR })} – ${format(range.to, "dd/MM/yyyy", { locale: ptBR })}`
+      : range?.from
+        ? `${format(range.from, "dd/MM/yyyy", { locale: ptBR })} – …`
+        : "Selecionar período";
+
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+        Período
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-9 w-[16rem] justify-start font-normal",
+              !range?.from && "text-muted-foreground",
+            )}
+          >
+            <CalendarDays className="mr-2 h-4 w-4" />
+            {rangeLabel}
+          </PopoverTrigger>
+          <PopoverContent>
+            <Calendar
+              mode="range"
+              selected={range}
+              onSelect={setRange}
+              numberOfMonths={2}
+              defaultMonth={range?.from}
+              autoFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
         Buscar campanha
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            defaultValue={filters.search ?? ""}
+            value={search}
             placeholder="Nome da campanha"
-            onChange={(e) => update({ search: e.target.value || null })}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") apply();
+            }}
             className="h-9 w-56 pl-8"
           />
         </div>
-      </label>
+      </div>
 
       {showPlatformFilter && (
         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
           Plataformas
           <div className="flex gap-1.5">
             {AD_PLATFORM_SLUGS.map((slug) => {
-              const on = selected.has(slug);
+              const on = platforms.has(slug);
               return (
                 <button
                   key={slug}
@@ -122,6 +170,27 @@ export function AdSpendFilters({
           </div>
         </div>
       )}
+
+      <div className="flex items-center gap-2">
+        <Button type="button" onClick={apply} disabled={pending} className="h-9">
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          Aplicar
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={clear}
+          disabled={pending}
+          className="h-9"
+        >
+          <X className="h-4 w-4" />
+          Limpar
+        </Button>
+      </div>
     </div>
   );
 }
