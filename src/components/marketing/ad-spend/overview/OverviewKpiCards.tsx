@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, pct, roasLabel } from "@/lib/marketing/ad-spend";
 import { ConversionHeaderInfo } from "@/components/marketing/ad-spend/shared/ConversionHeaderInfo";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { OverviewKpis } from "@/types/marketing-ads";
 
 /** 4 KPIs consolidados da visão geral (Seção 6.1). */
@@ -9,8 +11,9 @@ export function OverviewKpiCards({ kpis }: { kpis: OverviewKpis }) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
             Investimento total
+            <MetricInfo text={OVERVIEW_TOOLTIPS.spend_total} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -20,9 +23,10 @@ export function OverviewKpiCards({ kpis }: { kpis: OverviewKpis }) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+          <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
             Custo por resultado
             <ConversionHeaderInfo />
+            <MetricInfo text={OVERVIEW_TOOLTIPS.cost_per_conversion} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -35,8 +39,9 @@ export function OverviewKpiCards({ kpis }: { kpis: OverviewKpis }) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
             Taxa de conversão
+            <MetricInfo text={OVERVIEW_TOOLTIPS.conversion_rate} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -46,11 +51,9 @@ export function OverviewKpiCards({ kpis }: { kpis: OverviewKpis }) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle
-            className="text-sm font-medium text-muted-foreground"
-            title="Calculado apenas sobre plataformas com valor de conversão (Meta + Google)."
-          >
+          <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
             ROAS (Meta + Google)
+            <MetricInfo text={OVERVIEW_TOOLTIPS.roas} />
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { AD_PLATFORMS, AD_PLATFORM_SLUGS } from "@/lib/constants/marketing-ads";
 import { chartTooltipProps } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { TrendMetric, TrendPoint } from "@/types/marketing-ads";
 
 const METRICS: { key: TrendMetric; label: string }[] = [
@@ -47,7 +49,10 @@ export function TrendLineChart({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm">Tendência ({metric.toUpperCase()})</CardTitle>
+        <CardTitle className="flex items-center text-sm">
+          Tendência ({metric.toUpperCase()})
+          <MetricInfo text={OVERVIEW_TOOLTIPS.trend} />
+        </CardTitle>
         <div className="flex gap-1">
           {METRICS.map((m) => (
             <button

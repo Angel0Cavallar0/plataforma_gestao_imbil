@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
 
 export type StatTile = {
   label: string;
@@ -6,6 +7,8 @@ export type StatTile = {
   hint?: string;
   /** tooltip opcional no rótulo. */
   title?: string;
+  /** texto do ícone "?" ao lado do rótulo. */
+  info?: string;
 };
 
 /** Cabeçalho de KPIs da visão por plataforma — grade de tiles. */
@@ -16,10 +19,11 @@ export function PlatformKpiHeader({ tiles }: { tiles: StatTile[] }) {
         <Card key={tile.label}>
           <CardHeader className="pb-2">
             <CardTitle
-              className="text-sm font-medium text-muted-foreground"
+              className="flex items-center text-sm font-medium text-muted-foreground"
               title={tile.title}
             >
               {tile.label}
+              {tile.info && <MetricInfo text={tile.info} />}
             </CardTitle>
           </CardHeader>
           <CardContent>

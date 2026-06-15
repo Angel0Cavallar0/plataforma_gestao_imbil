@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { int } from "@/lib/marketing/ad-spend";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { META_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { MetaSummary } from "@/lib/marketing/platform-metrics";
 
 const RANKING_VARIANT: Record<string, "success" | "warning" | "destructive" | "muted"> = {
@@ -11,11 +13,22 @@ const RANKING_VARIANT: Record<string, "success" | "warning" | "destructive" | "m
   below_average_35: "destructive",
 };
 
-function RankingRow({ label, dist }: { label: string; dist: Record<string, number> }) {
+function RankingRow({
+  label,
+  info,
+  dist,
+}: {
+  label: string;
+  info: string;
+  dist: Record<string, number>;
+}) {
   const entries = Object.entries(dist);
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="flex items-center text-sm text-muted-foreground">
+        {label}
+        <MetricInfo text={info} />
+      </span>
       <span className="flex flex-wrap justify-end gap-1">
         {entries.length === 0 ? (
           <span className="text-xs text-muted-foreground">sem dado</span>
@@ -31,6 +44,26 @@ function RankingRow({ label, dist }: { label: string; dist: Record<string, numbe
   );
 }
 
+function VideoRow({
+  label,
+  info,
+  value,
+}: {
+  label: string;
+  info: string;
+  value: number;
+}) {
+  return (
+    <>
+      <dt className="flex items-center text-muted-foreground">
+        {label}
+        <MetricInfo text={info} />
+      </dt>
+      <dd className="text-right tabular-nums">{int(value)}</dd>
+    </>
+  );
+}
+
 /** Painel de métricas exclusivas do Meta (Seção 6.4). */
 export function MetaMetricsPanel({ summary }: { summary: MetaSummary }) {
   return (
@@ -43,9 +76,21 @@ export function MetaMetricsPanel({ summary }: { summary: MetaSummary }) {
           <p className="text-xs text-muted-foreground">
             Distribuição dos anúncios pelo estado mais recente de cada ranking.
           </p>
-          <RankingRow label="Qualidade" dist={summary.rankings.quality} />
-          <RankingRow label="Engajamento" dist={summary.rankings.engagement} />
-          <RankingRow label="Conversão" dist={summary.rankings.conversion} />
+          <RankingRow
+            label="Qualidade"
+            info={META_TOOLTIPS.ranking_quality}
+            dist={summary.rankings.quality}
+          />
+          <RankingRow
+            label="Engajamento"
+            info={META_TOOLTIPS.ranking_engagement}
+            dist={summary.rankings.engagement}
+          />
+          <RankingRow
+            label="Conversão"
+            info={META_TOOLTIPS.ranking_conversion}
+            dist={summary.rankings.conversion}
+          />
         </CardContent>
       </Card>
 
@@ -55,16 +100,31 @@ export function MetaMetricsPanel({ summary }: { summary: MetaSummary }) {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">ThruPlays</dt>
-            <dd className="text-right tabular-nums">{int(summary.video.thruplay)}</dd>
-            <dt className="text-muted-foreground">25% assistido</dt>
-            <dd className="text-right tabular-nums">{int(summary.video.p25)}</dd>
-            <dt className="text-muted-foreground">50% assistido</dt>
-            <dd className="text-right tabular-nums">{int(summary.video.p50)}</dd>
-            <dt className="text-muted-foreground">75% assistido</dt>
-            <dd className="text-right tabular-nums">{int(summary.video.p75)}</dd>
-            <dt className="text-muted-foreground">100% assistido</dt>
-            <dd className="text-right tabular-nums">{int(summary.video.p100)}</dd>
+            <VideoRow
+              label="ThruPlays"
+              info={META_TOOLTIPS.thruplays}
+              value={summary.video.thruplay}
+            />
+            <VideoRow
+              label="25% assistido"
+              info={META_TOOLTIPS.video_p25}
+              value={summary.video.p25}
+            />
+            <VideoRow
+              label="50% assistido"
+              info={META_TOOLTIPS.video_p50}
+              value={summary.video.p50}
+            />
+            <VideoRow
+              label="75% assistido"
+              info={META_TOOLTIPS.video_p75}
+              value={summary.video.p75}
+            />
+            <VideoRow
+              label="100% assistido"
+              info={META_TOOLTIPS.video_p100}
+              value={summary.video.p100}
+            />
           </dl>
         </CardContent>
       </Card>

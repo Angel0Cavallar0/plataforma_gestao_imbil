@@ -17,6 +17,8 @@ import {
   chartCursorFill,
   chartTooltipProps,
 } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { FunnelRow } from "@/types/marketing-ads";
 
 const STAGES = [
@@ -49,7 +51,10 @@ export function ConversionFunnelChart({ rows }: { rows: FunnelRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Funil de conversão — comparativo</CardTitle>
+        <CardTitle className="flex items-center text-sm">
+          Funil de conversão — comparativo
+          <MetricInfo text={OVERVIEW_TOOLTIPS.conversion_funnel} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="h-72">
         {rows.length === 0 ? (

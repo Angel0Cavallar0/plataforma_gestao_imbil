@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, int, pct } from "@/lib/marketing/ad-spend";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { GOOGLE_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { GoogleSummary } from "@/lib/marketing/platform-metrics";
 
 /** Painel de métricas exclusivas do Google (Seção 6.4). */
@@ -12,26 +14,23 @@ export function GoogleMetricsPanel({ summary }: { summary: GoogleSummary }) {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt
-              className="text-muted-foreground"
-              title="Fração das impressões elegíveis que você recebeu."
-            >
+            <dt className="flex items-center text-muted-foreground">
               Impression Share
+              <MetricInfo text={GOOGLE_TOOLTIPS.impression_share} />
             </dt>
             <dd className="text-right tabular-nums">
               {pct(summary.search_impression_share)}
             </dd>
-            <dt className="text-muted-foreground" title="IS perdido por orçamento.">
+            <dt className="flex items-center text-muted-foreground">
               Perdido por orçamento
+              <MetricInfo text={GOOGLE_TOOLTIPS.lost_budget} />
             </dt>
             <dd className="text-right tabular-nums">
               {pct(summary.search_budget_lost_is)}
             </dd>
-            <dt
-              className="text-muted-foreground"
-              title="IS perdido por ranking/qualidade."
-            >
+            <dt className="flex items-center text-muted-foreground">
               Perdido por ranking
+              <MetricInfo text={GOOGLE_TOOLTIPS.lost_rank} />
             </dt>
             <dd className="text-right tabular-nums">
               {pct(summary.search_rank_lost_is)}

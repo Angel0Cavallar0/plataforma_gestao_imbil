@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AD_PLATFORMS } from "@/lib/constants/marketing-ads";
 import { brl } from "@/lib/marketing/ad-spend";
 import { chartTooltipProps } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
+import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { PlatformSummary } from "@/types/marketing-ads";
 
 /** Donut de share de investimento por plataforma (Seção 7.3). */
@@ -22,7 +24,10 @@ export function InvestmentShareDonut({ split }: { split: PlatformSummary[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Share de investimento</CardTitle>
+        <CardTitle className="flex items-center text-sm">
+          Share de investimento
+          <MetricInfo text={OVERVIEW_TOOLTIPS.investment_share} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="h-72">
         {data.length === 0 ? (
