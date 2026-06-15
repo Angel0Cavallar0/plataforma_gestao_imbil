@@ -65,7 +65,6 @@ export async function PlatformView({
       {
         label: "Conversões (leads)",
         value: int(s.leads),
-        title: meta.conversionLabel,
         info: META_TOOLTIPS.conversions,
       },
       {
@@ -146,7 +145,6 @@ export async function PlatformView({
       {
         label: "Envios de Lead Gen",
         value: int(s.lead_gen_submissions),
-        title: meta.conversionLabel,
         info: LINKEDIN_TOOLTIPS.lead_gen_submissions,
       },
       {
@@ -164,7 +162,6 @@ export async function PlatformView({
       {
         label: "ROAS",
         value: "—",
-        title: "LinkedIn não fornece valor de conversão; ROAS indisponível.",
         info: LINKEDIN_TOOLTIPS.roas,
       },
     ];

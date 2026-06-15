@@ -5,8 +5,6 @@ export type StatTile = {
   label: string;
   value: string;
   hint?: string;
-  /** tooltip opcional no rótulo. */
-  title?: string;
   /** texto do ícone "?" ao lado do rótulo. */
   info?: string;
 };
@@ -18,10 +16,7 @@ export function PlatformKpiHeader({ tiles }: { tiles: StatTile[] }) {
       {tiles.map((tile) => (
         <Card key={tile.label}>
           <CardHeader className="pb-2">
-            <CardTitle
-              className="flex items-center text-sm font-medium text-muted-foreground"
-              title={tile.title}
-            >
+            <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
               {tile.label}
               {tile.info && <MetricInfo text={tile.info} />}
             </CardTitle>

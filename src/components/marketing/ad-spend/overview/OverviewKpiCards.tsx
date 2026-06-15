@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, pct, roasLabel } from "@/lib/marketing/ad-spend";
-import { ConversionHeaderInfo } from "@/components/marketing/ad-spend/shared/ConversionHeaderInfo";
 import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
 import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { OverviewKpis } from "@/types/marketing-ads";
@@ -25,7 +24,6 @@ export function OverviewKpiCards({ kpis }: { kpis: OverviewKpis }) {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
             Custo por resultado
-            <ConversionHeaderInfo />
             <MetricInfo text={OVERVIEW_TOOLTIPS.cost_per_conversion} />
           </CardTitle>
         </CardHeader>
