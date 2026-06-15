@@ -43,6 +43,33 @@ export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
       },
     ],
   },
+  {
+    slug: "midia-paga",
+    name: "Mídia Paga",
+    href: "/modulos/marketing/midia-paga",
+    children: [
+      {
+        slug: "midia-paga-geral",
+        name: "Visão geral",
+        href: "/modulos/marketing/midia-paga",
+      },
+      {
+        slug: "midia-paga-meta",
+        name: "Meta Ads",
+        href: "/modulos/marketing/midia-paga/meta",
+      },
+      {
+        slug: "midia-paga-google",
+        name: "Google Ads",
+        href: "/modulos/marketing/midia-paga/google",
+      },
+      {
+        slug: "midia-paga-linkedin",
+        name: "LinkedIn Ads",
+        href: "/modulos/marketing/midia-paga/linkedin",
+      },
+    ],
+  },
 ] as const;
 
 export const POST_STATUSES: PostStatus[] = [

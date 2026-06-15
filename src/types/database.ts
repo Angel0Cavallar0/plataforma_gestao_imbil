@@ -39,6 +39,21 @@ export type Database = {
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
       };
+      meta_ads_ad_insights: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      google_ads_ad_insights: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      linkedin_ads_creative_insights: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
       platforms: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
@@ -82,6 +97,15 @@ export type Database = {
     };
     Views: {
       v_events_roi: {
+        Row: Record<string, unknown>;
+      };
+      v_ads_daily: {
+        Row: Record<string, unknown>;
+      };
+      v_campaigns_daily: {
+        Row: Record<string, unknown>;
+      };
+      v_platforms_summary: {
         Row: Record<string, unknown>;
       };
     };
