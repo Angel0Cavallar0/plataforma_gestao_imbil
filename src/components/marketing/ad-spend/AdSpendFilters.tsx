@@ -116,10 +116,32 @@ export function AdSpendFilters({
               onSelect={setRange}
               numberOfMonths={2}
               defaultMonth={range?.from}
+              showOutsideDays={false}
               autoFocus
             />
           </PopoverContent>
         </Popover>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button type="button" onClick={apply} disabled={pending} className="h-9">
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          Aplicar
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={clear}
+          disabled={pending}
+          className="h-9"
+        >
+          <X className="h-4 w-4" />
+          Limpar
+        </Button>
       </div>
 
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -170,27 +192,6 @@ export function AdSpendFilters({
           </div>
         </div>
       )}
-
-      <div className="flex items-center gap-2">
-        <Button type="button" onClick={apply} disabled={pending} className="h-9">
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Check className="h-4 w-4" />
-          )}
-          Aplicar
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={clear}
-          disabled={pending}
-          className="h-9"
-        >
-          <X className="h-4 w-4" />
-          Limpar
-        </Button>
-      </div>
     </div>
   );
 }
