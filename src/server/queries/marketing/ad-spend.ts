@@ -332,6 +332,31 @@ export async function getPlatformCampaigns(
   return (data ?? []) as Record<string, unknown>[];
 }
 
+const PLATFORM_TABLE: Record<AdPlatformSlug, string> = {
+  meta_ads: "meta_ads_ad_insights",
+  google_ads: "google_ads_ad_insights",
+  linkedin_ads: "linkedin_ads_creative_insights",
+};
+
+/**
+ * Histórico completo de uma campanha (todas as linhas ad/creative × dia da
+ * tabela base da plataforma). Usado na tela de detalhe da campanha — sem
+ * recorte de período para mostrar o histórico inteiro.
+ */
+export async function getCampaignHistory(
+  slug: AdPlatformSlug,
+  campaignId: string,
+): Promise<Record<string, unknown>[]> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from(PLATFORM_TABLE[slug])
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("data_referencia", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Record<string, unknown>[];
+}
+
 /**
  * Saúde da integração. A "última sincronização" vem da última data de coleta
  * (coletado_em) dos próprios insights — o sync_runs do n8n ainda não registra

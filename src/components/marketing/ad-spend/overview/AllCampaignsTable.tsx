@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { brl, int, pct } from "@/lib/marketing/ad-spend";
@@ -121,13 +122,16 @@ export function AllCampaignsTable({ campaigns }: { campaigns: CampaignRow[] }) {
               className="border-t"
             >
               <td className="px-3 py-2">
-                <span className="flex items-center gap-2 font-medium">
+                <Link
+                  href={`/modulos/marketing/midia-paga/campanha/${AD_PLATFORMS[row.platform_slug].routeSlug}/${encodeURIComponent(row.external_campaign_id)}`}
+                  className="flex items-center gap-2 font-medium hover:underline"
+                >
                   <span
                     className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: AD_PLATFORMS[row.platform_slug].color }}
                   />
                   {row.campaign_name ?? row.external_campaign_id}
-                </span>
+                </Link>
                 <span className="block text-xs text-muted-foreground">
                   {AD_PLATFORMS[row.platform_slug].name}
                 </span>

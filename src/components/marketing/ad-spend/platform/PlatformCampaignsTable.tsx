@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { brl, int, pct } from "@/lib/marketing/ad-spend";
 import { RoasCell } from "@/components/marketing/ad-spend/shared/RoasCell";
 import { ConversionHeaderInfo } from "@/components/marketing/ad-spend/shared/ConversionHeaderInfo";
 import { OpenAdsManagerButton } from "@/components/marketing/ad-spend/shared/OpenAdsManagerButton";
+import { AD_PLATFORMS } from "@/lib/constants/marketing-ads";
 import type { AdPlatformSlug, CampaignRow } from "@/types/marketing-ads";
 
 /** Tabela de campanhas da plataforma + deep links (Seção 9.4). */
@@ -45,7 +47,12 @@ export function PlatformCampaignsTable({
           {sorted.map((row) => (
             <tr key={row.external_campaign_id} className="border-t">
               <td className="px-3 py-2 font-medium">
-                {row.campaign_name ?? row.external_campaign_id}
+                <Link
+                  href={`/modulos/marketing/midia-paga/campanha/${AD_PLATFORMS[platformSlug].routeSlug}/${encodeURIComponent(row.external_campaign_id)}`}
+                  className="hover:underline"
+                >
+                  {row.campaign_name ?? row.external_campaign_id}
+                </Link>
               </td>
               <td className="px-3 py-2 text-right tabular-nums">
                 {int(row.impressions)}
