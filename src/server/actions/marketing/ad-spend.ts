@@ -39,20 +39,31 @@ export async function getAdsManagerUrl(
     return { ok: false, reason: "forbidden" };
   }
 
-  const admin = createAdminClient();
-  const { data: cred } = await marketingSchema(admin)
-    .from("integration_credentials")
-    .select("external_account_id, credentials, is_active, platforms!inner(slug)")
-    .eq("platforms.slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+  try {
+    const admin = createAdminClient();
 
-  if (!cred) return { ok: false, reason: "not_configured" };
+    const { data: platform } = await marketingSchema(admin)
+      .from("platforms")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!platform) return { ok: false, reason: "not_configured" };
 
-  const raw = (cred as { credentials?: Record<string, string> }).credentials ?? {};
-  const url = buildAdsManagerUrl(slug, lvl, raw, ids);
-  if (!url) return { ok: false, reason: "not_configured" };
-  return { ok: true, url };
+    const { data: cred } = await marketingSchema(admin)
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("platform_id", (platform as { id: string }).id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!cred) return { ok: false, reason: "not_configured" };
+
+    const raw = (cred as { credentials?: Record<string, string> }).credentials ?? {};
+    const url = buildAdsManagerUrl(slug, lvl, raw, ids);
+    if (!url) return { ok: false, reason: "not_configured" };
+    return { ok: true, url };
+  } catch {
+    return { ok: false, reason: "not_configured" };
+  }
 }
 
 /**

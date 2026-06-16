@@ -50,7 +50,7 @@ export function OpenAdsManagerButton({
   if (notConfigured) {
     return (
       <Link
-        href="/configuracoes/integracoes"
+        href="/configuracoes/modulos/marketing/integracoes"
         className={cn(
           buttonVariants({ variant: "ghost", size }),
           "text-muted-foreground",
