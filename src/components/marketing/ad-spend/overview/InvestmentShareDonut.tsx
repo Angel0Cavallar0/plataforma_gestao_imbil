@@ -4,7 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AD_PLATFORMS } from "@/lib/constants/marketing-ads";
 import { brl } from "@/lib/marketing/ad-spend";
-import { chartTooltipProps } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
 import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
 import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { PlatformSummary } from "@/types/marketing-ads";
@@ -53,7 +53,7 @@ export function InvestmentShareDonut({ split }: { split: PlatformSummary[] }) {
                   <Cell key={d.name} fill={d.color} />
                 ))}
               </Pie>
-              <Tooltip {...chartTooltipProps} formatter={(value) => brl(Number(value))} />
+              <Tooltip content={<ChartTooltipContent formatValue={(v) => brl(v)} />} />
             </PieChart>
           </ResponsiveContainer>
         )}

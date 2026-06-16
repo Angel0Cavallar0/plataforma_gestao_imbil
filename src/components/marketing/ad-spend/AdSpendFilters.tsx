@@ -94,6 +94,17 @@ export function AdSpendFilters({
         ? `${format(range.from, "dd/MM/yyyy", { locale: ptBR })} – …`
         : "Selecionar período";
 
+  // No padrão (mês atual, sem busca, todas as plataformas) o "Aplicar" fica
+  // cinza; ao mudar qualquer filtro, ganha a cor principal indicando a ação.
+  const def = defaultDateRange();
+  const isDefaultView =
+    !!range?.from &&
+    !!range?.to &&
+    toIsoDate(range.from) === def.date_from &&
+    toIsoDate(range.to) === def.date_to &&
+    search.trim() === "" &&
+    (!showPlatformFilter || platforms.size === AD_PLATFORM_SLUGS.length);
+
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -124,7 +135,13 @@ export function AdSpendFilters({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="button" onClick={apply} disabled={pending} className="h-9">
+        <Button
+          type="button"
+          variant={isDefaultView ? "secondary" : "default"}
+          onClick={apply}
+          disabled={pending}
+          className="h-9"
+        >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

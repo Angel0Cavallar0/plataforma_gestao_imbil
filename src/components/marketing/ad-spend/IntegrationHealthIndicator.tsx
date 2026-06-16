@@ -12,8 +12,21 @@ function relative(iso: string | null): string {
   return `há ${Math.floor(h / 24)}d`;
 }
 
-function fmtDate(iso: string | null): string | null {
+function toIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** "hoje" / "ontem" para datas recentes; datas mais antigas em numérico. */
+function refDateLabel(iso: string | null): string | null {
   if (!iso) return null;
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === toIso(today)) return "hoje";
+  if (iso === toIso(yesterday)) return "ontem";
   return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
@@ -45,7 +58,7 @@ export function IntegrationHealthIndicator({ rows }: { rows: IntegrationHealthRo
         {AD_PLATFORM_SLUGS.map((slug) => {
           const row = byPlatform.get(slug);
           const { variant, label } = health(row);
-          const lastRef = fmtDate(row?.last_reference_date ?? null);
+          const lastRef = refDateLabel(row?.last_reference_date ?? null);
           return (
             <span key={slug} className="flex items-center gap-2">
               <span
@@ -64,7 +77,6 @@ export function IntegrationHealthIndicator({ rows }: { rows: IntegrationHealthRo
               >
                 {`última sincronização ${relative(row?.last_collected_at ?? null)}`}
                 {lastRef && ` · dados até ${lastRef}`}
-                {row && row.records > 0 && ` · ${row.records} registros`}
               </span>
             </span>
           );

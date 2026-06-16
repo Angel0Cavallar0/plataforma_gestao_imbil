@@ -13,10 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AD_PLATFORMS } from "@/lib/constants/marketing-ads";
 import { int } from "@/lib/marketing/ad-spend";
-import {
-  chartCursorFill,
-  chartTooltipProps,
-} from "@/components/marketing/ad-spend/shared/chart-theme";
+import { chartCursorFill } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
 import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
 import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { FunnelRow } from "@/types/marketing-ads";
@@ -73,9 +71,8 @@ export function ConversionFunnelChart({ rows }: { rows: FunnelRow[] }) {
                 tick={{ fontSize: 11 }}
               />
               <Tooltip
-                {...chartTooltipProps}
                 cursor={chartCursorFill}
-                formatter={(value) => int(Number(value))}
+                content={<ChartTooltipContent formatValue={(v) => int(v)} />}
               />
               <Legend />
               {[...present].map((slug) => (

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { AD_PLATFORMS, AD_PLATFORM_SLUGS } from "@/lib/constants/marketing-ads";
-import { chartTooltipProps } from "@/components/marketing/ad-spend/shared/chart-theme";
+import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
 import { MetricInfo } from "@/components/marketing/ad-spend/shared/MetricInfo";
 import { OVERVIEW_TOOLTIPS } from "@/lib/constants/midia-paga-tooltips";
 import type { TrendMetric, TrendPoint } from "@/types/marketing-ads";
@@ -88,8 +88,14 @@ export function TrendLineChart({
               />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
-                {...chartTooltipProps}
-                labelFormatter={(label) => fmtDate(String(label))}
+                content={
+                  <ChartTooltipContent
+                    formatLabel={(l) => fmtDate(String(l))}
+                    formatValue={(v) =>
+                      v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+                    }
+                  />
+                }
               />
               <Legend />
               {presentPlatforms.map((slug) => (
