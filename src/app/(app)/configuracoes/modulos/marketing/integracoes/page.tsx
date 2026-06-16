@@ -2,8 +2,8 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth/session";
 import { hasMinRole } from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
-import { MetaCredentialsForm } from "@/components/marketing/integrations/MetaCredentialsForm";
 import { MetaIntegrationCard } from "@/components/marketing/integrations/MetaIntegrationCard";
+import { MetaIntegrationAddCard } from "@/components/marketing/integrations/MetaIntegrationAddCard";
 import {
   AdAccountsManager,
   type AdAccount,
@@ -63,44 +63,51 @@ export default async function MarketingIntegracoesPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">Integrações de Marketing</h1>
         <p className="text-sm text-muted-foreground">
-          Credenciais Meta (Facebook + Instagram). Tokens armazenados no Vault.
+          Credenciais de publicação (Meta) e contas de anúncio usadas pelos deep links da
+          Mídia Paga. Esta área apenas direciona para as plataformas — não faz chamadas às
+          APIs.
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {socialCreds.map((cred) => (
-          <MetaIntegrationCard
-            key={cred.id as string}
-            credential={{
-              id: cred.id as string,
-              label: cred.label as string,
-              is_active: cred.is_active as boolean,
-              last_validated_at: cred.last_validated_at as string | null,
-              credentials: cred.credentials as MetaCredentialsJson,
-              external_account_id: cred.external_account_id as string | null,
-            }}
-          />
-        ))}
-      </div>
-
-      {instagramPlatform && (
-        <div className="rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-medium">Adicionar integração Meta</h2>
-          <MetaCredentialsForm platformId={instagramPlatform.id} />
-        </div>
+      {socialCreds.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Conexões ativas</h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {socialCreds.map((cred) => (
+              <MetaIntegrationCard
+                key={cred.id as string}
+                credential={{
+                  id: cred.id as string,
+                  label: cred.label as string,
+                  is_active: cred.is_active as boolean,
+                  last_validated_at: cred.last_validated_at as string | null,
+                  credentials: cred.credentials as MetaCredentialsJson,
+                  external_account_id: cred.external_account_id as string | null,
+                }}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
-      <div className="space-y-3 border-t pt-8">
+      <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-medium">Contas de anúncio (Mídia Paga)</h2>
+          <h2 className="text-lg font-medium">Contas e integrações</h2>
           <p className="text-sm text-muted-foreground">
-            Cadastre os IDs das contas de anúncio usados pelo botão “Abrir no gerenciador”
-            do submódulo de Mídia Paga. Apenas direciona para as páginas das plataformas —
-            não faz chamadas às APIs.
+            Adicione a credencial de publicação do Meta e os IDs das contas de anúncio
+            (Meta Ads, Google Ads, LinkedIn Ads) usados pelo botão “Abrir no gerenciador”.
           </p>
         </div>
-        <AdAccountsManager accounts={adAccounts} />
-      </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {instagramPlatform && (
+            <MetaIntegrationAddCard
+              platformId={instagramPlatform.id}
+              connected={socialCreds.length > 0}
+            />
+          )}
+          <AdAccountsManager accounts={adAccounts} />
+        </div>
+      </section>
     </div>
   );
 }
