@@ -70,6 +70,43 @@ export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
       },
     ],
   },
+  {
+    slug: "insights",
+    name: "Insights",
+    href: "/modulos/marketing/insights",
+    children: [
+      {
+        slug: "insights-redes-sociais",
+        name: "Redes Sociais",
+        href: "/modulos/marketing/insights/redes-sociais",
+      },
+      {
+        slug: "insights-midia-paga",
+        name: "Mídia Paga",
+        href: "/modulos/marketing/insights/midia-paga",
+      },
+      {
+        slug: "insights-midia-paga-insights",
+        name: "Mídia Paga Insights",
+        href: "/modulos/marketing/insights/midia-paga-insights",
+      },
+      {
+        slug: "insights-youtube",
+        name: "YouTube",
+        href: "/modulos/marketing/insights/youtube",
+      },
+      {
+        slug: "insights-site",
+        name: "Acessos do Site",
+        href: "/modulos/marketing/insights/site",
+      },
+      {
+        slug: "insights-mencoes",
+        name: "Menções à Marca",
+        href: "/modulos/marketing/insights/mencoes",
+      },
+    ],
+  },
 ] as const;
 
 export const POST_STATUSES: PostStatus[] = [

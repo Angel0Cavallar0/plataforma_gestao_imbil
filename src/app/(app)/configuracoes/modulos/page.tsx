@@ -13,6 +13,10 @@ const MODULE_ITEMS: Record<string, ModuleItem[]> = {
       label: "Integrações e contas de anúncio",
       href: "/configuracoes/modulos/marketing/integracoes",
     },
+    {
+      label: "Relatórios (webhook de IA)",
+      href: "/configuracoes/modulos/marketing/relatorios",
+    },
   ],
 };
 
