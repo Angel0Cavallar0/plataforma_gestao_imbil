@@ -1,5 +1,4 @@
 import { TriangleAlert } from "lucide-react";
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { InsightsFilters } from "@/components/marketing/insights/InsightsFilters";
 import { SiteKpis } from "@/components/marketing/insights/site/SiteKpis";
 import { SessionsTrendChart } from "@/components/marketing/insights/site/SessionsTrendChart";
@@ -25,7 +24,6 @@ export default async function SiteInsightsPage({
         </p>
       </div>
 
-      <InsightsTabs />
       <InsightsFilters filters={filters} />
 
       {site.daysCovered > 0 && site.daysCovered <= 7 && (

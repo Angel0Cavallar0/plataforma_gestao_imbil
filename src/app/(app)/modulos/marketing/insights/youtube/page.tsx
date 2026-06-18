@@ -1,4 +1,3 @@
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { YouTubeChannelKpis } from "@/components/marketing/insights/youtube/YouTubeChannelKpis";
 import { SubscribersTrendChart } from "@/components/marketing/insights/youtube/SubscribersTrendChart";
 import { YouTubeVideosGrid } from "@/components/marketing/insights/youtube/YouTubeVideosGrid";
@@ -15,8 +14,6 @@ export default async function YouTubeInsightsPage() {
           Inscritos, visualizações e vídeos do canal da Imbil.
         </p>
       </div>
-
-      <InsightsTabs />
 
       <YouTubeChannelKpis latest={yt.latest} />
       <SubscribersTrendChart history={yt.history} />

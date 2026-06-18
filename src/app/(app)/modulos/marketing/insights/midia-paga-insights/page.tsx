@@ -1,4 +1,3 @@
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { GenerateReportButton } from "@/components/marketing/insights/GenerateReportButton";
 import { ReportPanel } from "@/components/marketing/insights/ReportPanel";
 import { getReportById, listReports } from "@/server/queries/marketing/insights";
@@ -47,8 +46,6 @@ export default async function MidiaPagaInsightsReportPage({
           webhookConfigured={webhookUrl.trim().length > 0}
         />
       </div>
-
-      <InsightsTabs />
 
       <ReportPanel
         title="Relatório de Mídia Paga (IA)"

@@ -1,4 +1,3 @@
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { SentimentDistribution } from "@/components/marketing/insights/mentions/SentimentDistribution";
 import { MentionsFeed } from "@/components/marketing/insights/mentions/MentionsFeed";
 import { getBrandMentions } from "@/server/queries/marketing/insights";
@@ -14,8 +13,6 @@ export default async function MencoesInsightsPage() {
           Menções à Imbil e avaliações do Google Meu Negócio.
         </p>
       </div>
-
-      <InsightsTabs />
 
       <SentimentDistribution data={data} />
       <MentionsFeed data={data} />

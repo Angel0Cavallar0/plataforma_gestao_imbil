@@ -1,4 +1,3 @@
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { AdSpendFilters } from "@/components/marketing/ad-spend/AdSpendFilters";
 import { GenerateReportButton } from "@/components/marketing/insights/GenerateReportButton";
 import { PaidDataPanels } from "@/components/marketing/insights/paid/PaidDataPanels";
@@ -37,7 +36,6 @@ export default async function MidiaPagaInsightsPage({
         />
       </div>
 
-      <InsightsTabs />
       <AdSpendFilters filters={filters} />
 
       <PaidDataPanels filters={filters} />

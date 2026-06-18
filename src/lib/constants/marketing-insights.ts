@@ -1,18 +1,5 @@
 import type { ReportTipo, SocialNetwork } from "@/types/marketing-insights";
 
-/** Abas internas do submódulo Insights (navegação primária no topo). */
-export const INSIGHTS_TABS = [
-  { label: "Redes Sociais", href: "/modulos/marketing/insights/redes-sociais" },
-  { label: "Mídia Paga", href: "/modulos/marketing/insights/midia-paga" },
-  {
-    label: "Mídia Paga Insights",
-    href: "/modulos/marketing/insights/midia-paga-insights",
-  },
-  { label: "YouTube", href: "/modulos/marketing/insights/youtube" },
-  { label: "Acessos do Site", href: "/modulos/marketing/insights/site" },
-  { label: "Menções à Marca", href: "/modulos/marketing/insights/mencoes" },
-] as const;
-
 type NetworkMeta = {
   slug: SocialNetwork;
   name: string;

@@ -1,4 +1,3 @@
-import { InsightsTabs } from "@/components/marketing/insights/InsightsTabs";
 import { InsightsFilters } from "@/components/marketing/insights/InsightsFilters";
 import { GenerateReportButton } from "@/components/marketing/insights/GenerateReportButton";
 import { SocialNetworkTabs } from "@/components/marketing/insights/social/SocialNetworkTabs";
@@ -64,7 +63,6 @@ export default async function RedesSociaisInsightsPage({
         />
       </div>
 
-      <InsightsTabs />
       <InsightsFilters filters={filters} />
 
       <SocialNetworkTabs
