@@ -86,11 +86,6 @@ export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
         href: "/modulos/marketing/insights/midia-paga",
       },
       {
-        slug: "insights-midia-paga-insights",
-        name: "Mídia Paga Insights",
-        href: "/modulos/marketing/insights/midia-paga-insights",
-      },
-      {
         slug: "insights-youtube",
         name: "YouTube",
         href: "/modulos/marketing/insights/youtube",

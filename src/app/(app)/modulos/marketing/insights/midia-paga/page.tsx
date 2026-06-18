@@ -1,11 +1,19 @@
 import { AdSpendFilters } from "@/components/marketing/ad-spend/AdSpendFilters";
 import { GenerateReportButton } from "@/components/marketing/insights/GenerateReportButton";
 import { PaidDataPanels } from "@/components/marketing/insights/paid/PaidDataPanels";
+import { ReportPanel } from "@/components/marketing/insights/ReportPanel";
 import { parseAdSpendFilters } from "@/lib/marketing/ad-spend";
+import { getReportById, listReports } from "@/server/queries/marketing/insights";
+import { enrichReportEntities } from "@/server/queries/marketing/report-enrichment";
 import {
   getRemainingReportQuota,
   getReportsWebhookUrl,
 } from "@/server/queries/marketing/reports-control";
+import type { ReportTipo } from "@/types/marketing-insights";
+
+function first(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
 
 export default async function MidiaPagaInsightsPage({
   searchParams,
@@ -14,11 +22,18 @@ export default async function MidiaPagaInsightsPage({
 }) {
   const sp = await searchParams;
   const filters = parseAdSpendFilters(sp);
+  const reportId = first(sp.report);
+  const tipo = first(sp.tipo) as ReportTipo | undefined;
 
-  const [remaining, webhookUrl] = await Promise.all([
+  const [reports, remaining, webhookUrl] = await Promise.all([
+    listReports(tipo),
     getRemainingReportQuota(),
     getReportsWebhookUrl(),
   ]);
+
+  const targetId = reportId ?? reports[0]?.id;
+  const report = targetId ? await getReportById(targetId) : null;
+  const enrichment = await enrichReportEntities(report?.report_json ?? null);
 
   return (
     <div className="space-y-6">
@@ -26,7 +41,8 @@ export default async function MidiaPagaInsightsPage({
         <div>
           <h1 className="text-2xl font-semibold">Insights — Mídia Paga</h1>
           <p className="text-sm text-muted-foreground">
-            Dados detalhados das campanhas de Meta Ads, Google Ads e LinkedIn Ads.
+            Dados detalhados das campanhas de Meta Ads, Google Ads e LinkedIn Ads, com a
+            análise de IA do período.
           </p>
         </div>
         <GenerateReportButton
@@ -39,6 +55,14 @@ export default async function MidiaPagaInsightsPage({
       <AdSpendFilters filters={filters} />
 
       <PaidDataPanels filters={filters} />
+
+      <ReportPanel
+        title="Relatório de Mídia Paga (IA)"
+        scope="midia_paga_insights"
+        report={report}
+        enrichment={enrichment}
+        reports={reports}
+      />
     </div>
   );
 }
