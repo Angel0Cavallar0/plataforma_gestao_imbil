@@ -67,6 +67,8 @@ const HIDDEN_FIELDS = new Set([
   "permalink",
   "media_url",
   "thumbnail_url",
+  "media_storage_url",
+  "thumbnail_storage_url",
   "caption",
   "message",
   "media_type",

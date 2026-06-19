@@ -19,9 +19,10 @@ function TypeIcon({ mediaType }: { mediaType?: string | null }) {
 const LINKEDIN_NO_THUMB = new Set(["TEXT", "NONE", "POLL"]);
 
 /**
- * Miniatura de um post. Instagram e LinkedIn usam proxies internos (CSP-safe e
- * gated por marketing.read); Facebook não tem thumbnail → placeholder com ícone
- * do tipo. Falhas de carregamento caem no placeholder.
+ * Miniatura de um post. Instagram, Facebook e LinkedIn usam proxies internos
+ * (CSP-safe, mídia espelhada no bucket privado, gated por marketing.read).
+ * Vídeos pedem a capa (?thumb=1). Posts sem mídia (ou falha de carregamento)
+ * caem no placeholder com ícone do tipo.
  */
 export function PostThumbnail({
   network,
@@ -38,15 +39,18 @@ export function PostThumbnail({
   fit?: "cover" | "contain";
 }) {
   const [failed, setFailed] = useState(false);
-  // Vídeos/Reels do Instagram: usa a capa (thumbnail_url) em vez do .mp4.
+  // Vídeos/Reels: usa a capa (?thumb=1 → thumbnail_storage_url) em vez do .mp4.
   const t = (mediaType ?? "").toUpperCase();
   const isVideo = t.includes("VIDEO") || t.includes("REEL");
-  const src =
+  const proxyBase =
     network === "instagram"
-      ? `/api/marketing/instagram-media/${encodeURIComponent(id)}${isVideo ? "?thumb=1" : ""}`
-      : network === "linkedin" && !LINKEDIN_NO_THUMB.has(t)
-        ? `/api/marketing/linkedin-post/${encodeURIComponent(id)}`
-        : null;
+      ? `/api/marketing/instagram-media/${encodeURIComponent(id)}`
+      : network === "facebook"
+        ? `/api/marketing/facebook-post/${encodeURIComponent(id)}`
+        : network === "linkedin" && !LINKEDIN_NO_THUMB.has(t)
+          ? `/api/marketing/linkedin-post/${encodeURIComponent(id)}`
+          : null;
+  const src = proxyBase ? `${proxyBase}${isVideo ? "?thumb=1" : ""}` : null;
 
   const box = cn(
     "flex shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted",

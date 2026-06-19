@@ -4,34 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { marketingSchema } from "@/lib/supabase/marketing";
 import { proxyMarketingStorageMedia } from "@/lib/marketing/media-storage";
 
-/** Fallback legado: proxy da CDN licdn para linhas ainda sem mídia no bucket. */
-async function proxyCdnImage(imageUrl: string) {
-  const upstream = await fetch(imageUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; ImbilGestao/1.0; +https://imbil.com.br)",
-      Accept: "image/*,*/*",
-    },
-    cache: "no-store",
-  });
-
-  if (!upstream.ok || !upstream.body) {
-    return null;
-  }
-
-  return new Response(upstream.body, {
-    status: 200,
-    headers: {
-      "Content-Type": upstream.headers.get("content-type") ?? "image/jpeg",
-      "Cache-Control": "private, max-age=300",
-    },
-  });
-}
-
 /**
- * Proxy CSP-safe da mídia de posts do LinkedIn. Prefere a mídia espelhada no
- * bucket privado (media_storage_url / thumbnail_storage_url, via URL assinada) e
- * cai na CDN licdn (thumbnail_url) para linhas ainda não espelhadas. Gated por
- * marketing.read. Posts sem mídia (texto/enquete) retornam 404 → placeholder.
+ * Proxy CSP-safe da mídia de posts do Facebook espelhada no bucket privado
+ * (media_storage_url = imagem/vídeo; thumbnail_storage_url = capa do vídeo). A
+ * URL assinada é resolvida no servidor e o binário transmitido pela nossa
+ * origem (default-src/img-src 'self'). Gated por marketing.read. Posts sem mídia
+ * (texto/link) retornam 404 → placeholder.
  */
 export async function GET(
   request: Request,
@@ -55,8 +33,8 @@ export async function GET(
 
   const supabase = await createClient();
   const { data } = await marketingSchema(supabase)
-    .from("linkedin_post_insights")
-    .select("media_storage_url, thumbnail_storage_url, thumbnail_url")
+    .from("facebook_post_insights")
+    .select("media_storage_url, thumbnail_storage_url")
     .eq("post_id", decodedId)
     .order("data_referencia", { ascending: false })
     .limit(1)
@@ -65,7 +43,6 @@ export async function GET(
   const row = data as {
     media_storage_url?: string | null;
     thumbnail_storage_url?: string | null;
-    thumbnail_url?: string | null;
   } | null;
 
   const storageUrl = wantThumb
@@ -75,14 +52,6 @@ export async function GET(
   const fromStorage = await proxyMarketingStorageMedia(supabase, storageUrl);
   if (fromStorage) {
     return fromStorage;
-  }
-
-  // Fallback: CDN licdn (somente imagem/thumbnail legada).
-  if (row?.thumbnail_url) {
-    const fromCdn = await proxyCdnImage(row.thumbnail_url);
-    if (fromCdn) {
-      return fromCdn;
-    }
   }
 
   return new Response("Sem mídia", { status: 404 });

@@ -175,6 +175,10 @@ export type LinkedInPostInsightRow = {
   text: string | null;
   permalink: string | null;
   thumbnail_url: string | null;
+  /** Mídia em si no bucket privado (imagem .jpg ou vídeo .mp4). */
+  media_storage_url: string | null;
+  /** Capa .jpg no bucket — preenchida só para vídeo. */
+  thumbnail_storage_url: string | null;
   impressions: number | null;
   unique_impressions: number | null;
   clicks: number | null;
@@ -197,6 +201,10 @@ export type InstagramMediaInsightRow = {
   permalink: string | null;
   media_url: string | null;
   thumbnail_url: string | null;
+  /** Mídia em si no bucket privado marketing-content-assets (imagem .jpg ou vídeo .mp4). */
+  media_storage_url: string | null;
+  /** Capa .jpg no bucket — preenchida só para vídeo (NULL em foto/carrossel). */
+  thumbnail_storage_url: string | null;
   caption: string | null;
   impressions: number | null;
   reach: number | null;
@@ -223,6 +231,10 @@ export type InstagramCarouselChild = {
   media_type: string;
   media_url: string | null;
   thumbnail_url: string | null;
+  /** Mídia do slide no bucket privado (imagem .jpg ou vídeo .mp4). */
+  media_storage_url: string | null;
+  /** Capa .jpg do slide no bucket — preenchida só para vídeo. */
+  thumbnail_storage_url: string | null;
   coletado_em: string | null;
 };
 
@@ -233,6 +245,10 @@ export type FacebookPostInsightRow = {
   permalink: string | null;
   message: string | null;
   post_type: string | null;
+  /** Mídia em si no bucket privado (imagem .jpg ou vídeo .mp4). */
+  media_storage_url: string | null;
+  /** Capa .jpg no bucket — preenchida só para vídeo. */
+  thumbnail_storage_url: string | null;
   reach: number | null;
   impressions: number | null;
   engaged_users: number | null;
