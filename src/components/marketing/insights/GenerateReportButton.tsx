@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarDays, Loader2, Sparkles } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -9,6 +9,14 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toIsoDate } from "@/lib/marketing/ad-spend";
 import { DAILY_REPORT_LIMIT } from "@/lib/constants/marketing-insights";
@@ -33,6 +41,7 @@ export function GenerateReportButton({
   const [generating, setGenerating] = useState(false);
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [open, setOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Reabre o botão quando o relatório fica pronto (evento do realtime listener).
   useEffect(() => {
@@ -65,9 +74,7 @@ export function GenerateReportButton({
       if (res.ok) {
         setRemaining(res.remaining);
         setGenerating(true);
-        toast.success(
-          "Relatório solicitado! Ficará disponível em alguns minutos (em média 5). Avisaremos quando estiver pronto.",
-        );
+        setInfoOpen(true);
         window.dispatchEvent(new CustomEvent("mkt-report-requested"));
       } else if (res.reason === "daily_limit") {
         setRemaining(0);
@@ -146,6 +153,27 @@ export function GenerateReportButton({
               ? `Limite diário de ${DAILY_REPORT_LIMIT} relatórios (global) atingido.`
               : `${remaining} de ${DAILY_REPORT_LIMIT} solicitações restantes hoje (limite global).`}
       </p>
+
+      <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Clock className="h-5 w-5" />
+              </span>
+              Relatório solicitado!
+            </DialogTitle>
+            <DialogDescription className="pt-1 text-left">
+              O relatório está sendo gerado e leva, em média, <strong>5 minutos</strong>{" "}
+              para ficar pronto. Você pode continuar usando o sistema normalmente —
+              avisaremos aqui assim que ele estiver disponível.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <DialogClose className={cn(buttonVariants())}>Entendi</DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
