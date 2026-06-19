@@ -12,8 +12,8 @@ const PALETTE = [
   "#db2777", // rosa
 ];
 
-/** Cor de destaque da própria Imbil (benchmark nas abas de busca/tendências). */
-export const IMBIL_COLOR = "#111827";
+/** Cor de destaque da própria Imbil (benchmark) — vermelho padrão do site (--destructive). */
+export const IMBIL_COLOR = "#dc2626";
 
 /** Cor estável e determinística por nome de empresa. Imbil sempre destacada. */
 export function competitorColor(name: string, index: number): string {

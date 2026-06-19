@@ -1,12 +1,12 @@
 import { CompetitorsTabs } from "@/components/marketing/competitors/CompetitorsTabs";
 import { CompetitorSelector } from "@/components/marketing/competitors/CompetitorSelector";
-import { IgFollowersTrend } from "@/components/marketing/competitors/social/IgFollowersTrend";
+import { IgFollowersCards } from "@/components/marketing/competitors/social/IgFollowersCards";
 import { IgPostsGrid } from "@/components/marketing/competitors/social/IgPostsGrid";
 import { CompetitorBars } from "@/components/marketing/competitors/shared/CompetitorBars";
 import { firstParam } from "@/lib/marketing/competitors";
 import {
   getCompetitors,
-  getIgFollowersTrend,
+  getCompetitorsOverview,
   getIgPosts,
 } from "@/server/queries/marketing/competitors";
 
@@ -18,9 +18,9 @@ export default async function ConcorrentesRedesSociaisPage({
   const sp = await searchParams;
   const competitorId = firstParam(sp.competitor);
 
-  const [competitors, followers, posts, allPosts] = await Promise.all([
+  const [competitors, overview, posts, allPosts] = await Promise.all([
     getCompetitors(),
-    getIgFollowersTrend(competitorId),
+    getCompetitorsOverview(),
     getIgPosts(competitorId, 60),
     getIgPosts(undefined, 500),
   ]);
@@ -44,14 +44,17 @@ export default async function ConcorrentesRedesSociaisPage({
       <div>
         <h1 className="text-2xl font-semibold">Concorrentes — Redes Sociais</h1>
         <p className="text-sm text-muted-foreground">
-          Instagram: evolução de seguidores, posts e engajamento.
+          Instagram: seguidores, posts e engajamento.
         </p>
       </div>
 
       <CompetitorsTabs />
       <CompetitorSelector competitors={competitors} />
 
-      <IgFollowersTrend points={followers} />
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Seguidores no Instagram</h2>
+        <IgFollowersCards rows={overview} />
+      </div>
 
       <CompetitorBars
         title="Engajamento médio por post (likes + comentários)"
