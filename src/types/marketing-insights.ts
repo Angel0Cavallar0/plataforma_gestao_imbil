@@ -176,6 +176,8 @@ export type BrandMention = {
   imagem_autor_url: string | null;
   data_publicacao: string | null;
   rating: number | null;
+  respondida: boolean;
+  respondida_em: string | null;
 };
 
 export type MentionsData = {

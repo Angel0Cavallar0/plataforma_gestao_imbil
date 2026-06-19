@@ -504,7 +504,7 @@ export async function getBrandMentions(): Promise<MentionsData> {
   const { data, error } = await marketingSchema(supabase)
     .from("brand_mentions")
     .select(
-      "id, plataforma, autor_nome, autor_urn, texto, url, imagem_post_url, imagem_autor_url, data_publicacao, rating",
+      "id, plataforma, autor_nome, autor_urn, texto, url, imagem_post_url, imagem_autor_url, data_publicacao, rating, respondida, respondida_em",
     )
     .order("data_publicacao", { ascending: false });
   if (error) throw error;
