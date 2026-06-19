@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "../shared/EmptyState";
 import { StarRating } from "../shared/StarRating";
@@ -24,17 +24,9 @@ export function ReviewsFeed({
         <Card key={r.id} className="flex flex-col gap-2 p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              {r.imagem_autor_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={r.imagem_autor_url}
-                  alt=""
-                  className="h-8 w-8 rounded-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-muted" />
-              )}
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <User className="h-4 w-4" />
+              </span>
               <div className="leading-tight">
                 <p className="text-sm font-medium">{r.autor_nome ?? "Anônimo"}</p>
                 <p className="text-xs text-muted-foreground">

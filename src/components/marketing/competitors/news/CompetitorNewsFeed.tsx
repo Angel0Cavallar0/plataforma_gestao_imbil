@@ -21,15 +21,6 @@ export function CompetitorNewsFeed({
     <div className="space-y-3">
       {news.map((n) => (
         <Card key={n.id} className="flex gap-4 p-4">
-          {n.thumbnail_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={n.thumbnail_url}
-              alt=""
-              className="hidden h-24 w-32 shrink-0 rounded-md object-cover sm:block"
-              loading="lazy"
-            />
-          ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {n.favicon_url ? (

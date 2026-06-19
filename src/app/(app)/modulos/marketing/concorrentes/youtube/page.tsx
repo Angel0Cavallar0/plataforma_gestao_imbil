@@ -3,7 +3,7 @@ import { CompetitorSelector } from "@/components/marketing/competitors/Competito
 import { YtSubscribersTrend } from "@/components/marketing/competitors/youtube/YtSubscribersTrend";
 import { YtVideosGrid } from "@/components/marketing/competitors/youtube/YtVideosGrid";
 import { CompetitorBars } from "@/components/marketing/competitors/shared/CompetitorBars";
-import { firstParam, formatCompact } from "@/lib/marketing/competitors";
+import { firstParam } from "@/lib/marketing/competitors";
 import {
   getCompetitors,
   getCompetitorsOverview,
@@ -57,14 +57,14 @@ export default async function ConcorrentesYoutubePage({
           seriesName="Inscritos"
           data={subsBars}
           emptyMessage="Sem dados de inscritos."
-          formatValue={formatCompact}
+          format="compact"
         />
         <CompetitorBars
           title="Média de views por vídeo"
           seriesName="Média de views"
           data={avgViewsBars}
           emptyMessage="Sem dados de visualizações."
-          formatValue={formatCompact}
+          format="compact"
         />
       </div>
 

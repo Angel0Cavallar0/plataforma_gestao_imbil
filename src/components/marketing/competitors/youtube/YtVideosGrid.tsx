@@ -1,5 +1,7 @@
 import { Eye, ThumbsUp, MessageCircle, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "../shared/EmptyState";
 import { formatCompact, formatDate } from "@/lib/marketing/competitors";
 import type { Competitor, YoutubeVideo } from "@/types/marketing-competitors";
@@ -48,15 +50,18 @@ export function YtVideosGrid({
                 <MessageCircle className="h-3.5 w-3.5" /> {formatCompact(v.comment_count)}
               </span>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>{formatDate(v.published_at)}</span>
               <a
                 href={`https://www.youtube.com/watch?v=${v.video_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "gap-1",
+                )}
               >
-                Abrir <ExternalLink className="h-3 w-3" />
+                Assistir no YouTube <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>

@@ -13,24 +13,35 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
 import { EmptyState } from "./EmptyState";
-import { competitorColor, formatCompact } from "@/lib/marketing/competitors";
+import {
+  competitorColor,
+  formatCompact,
+  formatNumber,
+} from "@/lib/marketing/competitors";
 
 export type BarDatum = { name: string; value: number };
 
-/** Barras comparativas genéricas por concorrente (horizontais), cores estáveis. */
+/**
+ * Barras comparativas genéricas por concorrente (horizontais), cores estáveis.
+ *
+ * Recebe `format` (string serializável) em vez de uma função, pois este é um
+ * Client Component que pode ser renderizado a partir de um Server Component —
+ * funções não podem cruzar a fronteira RSC.
+ */
 export function CompetitorBars({
   title,
   data,
   seriesName,
   emptyMessage = "Sem dados.",
-  formatValue = formatCompact,
+  format = "compact",
 }: {
   title: string;
   data: BarDatum[];
   seriesName: string;
   emptyMessage?: string;
-  formatValue?: (v: number) => string;
+  format?: "compact" | "number";
 }) {
+  const formatValue = format === "number" ? formatNumber : formatCompact;
   const rows = [...data].sort((a, b) => b.value - a.value);
 
   return (

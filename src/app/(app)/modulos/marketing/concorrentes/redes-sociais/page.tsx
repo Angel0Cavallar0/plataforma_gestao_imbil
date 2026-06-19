@@ -3,7 +3,7 @@ import { CompetitorSelector } from "@/components/marketing/competitors/Competito
 import { IgFollowersTrend } from "@/components/marketing/competitors/social/IgFollowersTrend";
 import { IgPostsGrid } from "@/components/marketing/competitors/social/IgPostsGrid";
 import { CompetitorBars } from "@/components/marketing/competitors/shared/CompetitorBars";
-import { firstParam, formatNumber } from "@/lib/marketing/competitors";
+import { firstParam } from "@/lib/marketing/competitors";
 import {
   getCompetitors,
   getIgFollowersTrend,
@@ -58,7 +58,7 @@ export default async function ConcorrentesRedesSociaisPage({
         seriesName="Engajamento médio"
         data={engagement}
         emptyMessage="Sem posts coletados."
-        formatValue={(v) => formatNumber(v)}
+        format="number"
       />
 
       <div className="space-y-2">

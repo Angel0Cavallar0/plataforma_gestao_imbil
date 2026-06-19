@@ -7,6 +7,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "../shared/EmptyState";
 import { formatNumber, formatDate } from "@/lib/marketing/competitors";
 import type { Competitor, IgPost } from "@/types/marketing-competitors";
@@ -61,7 +63,10 @@ export function IgPostsGrid({
               href={p.permalink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "mt-3 w-fit gap-1",
+              )}
             >
               Ver no Instagram <ExternalLink className="h-3 w-3" />
             </a>
