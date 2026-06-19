@@ -16,6 +16,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ profile, nav }: AppSidebarProps) {
   const pathname = usePathname();
+  // Dashboards disponíveis dependem do acesso ao módulo de origem.
+  const hasMarketing = nav.modules.some((m) => m.slug === "marketing");
 
   const linkClass = (href: string) =>
     cn(
@@ -49,6 +51,22 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
           <LayoutDashboard className="h-4 w-4 shrink-0" />
           Dashboards
         </Link>
+        {hasMarketing && (
+          <div className="ml-4 space-y-1 border-l border-sidebar-border pl-2">
+            <Link
+              href="/dashboards/marketing"
+              className={cn(
+                "block rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                pathname === "/dashboards/marketing" ||
+                  pathname.startsWith("/dashboards/marketing/")
+                  ? "bg-sidebar-accent/50 text-sidebar-foreground"
+                  : "",
+              )}
+            >
+              Marketing
+            </Link>
+          </div>
+        )}
 
         <div className="pt-2">
           <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/50">
@@ -75,8 +93,7 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
                       (pathname === sub.href ||
                         pathname.startsWith(sub.href + "/") ||
                         sub.children.some(
-                          (c) =>
-                            pathname === c.href || pathname.startsWith(c.href + "/"),
+                          (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
                         ));
                     return sub.children ? (
                       <details key={sub.slug} className="group/sub" open={groupActive}>
