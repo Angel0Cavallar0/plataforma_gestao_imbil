@@ -24,6 +24,13 @@ function num(v: number | null | undefined): number {
   return v == null || Number.isNaN(Number(v)) ? 0 : Number(v);
 }
 
+/** Próximo dia (UTC) de uma data ISO yyyy-mm-dd — usado em filtros de período. */
+function nextDayIso(iso: string): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Mantém, por id, a linha com a data_referencia mais recente (métrica cumulativa). */
 function latestPerId<T extends { data_referencia: string }>(
   rows: T[],
@@ -236,8 +243,8 @@ export async function getSocialPosts(
           .select(
             "media_id, data_referencia, media_type, permalink, media_url, thumbnail_url, caption, published_at, reach, impressions, likes, comments, saves, shares, plays, is_boosted, ad_spend, ad_impressions, ad_reach",
           )
-          .gte("data_referencia", date_from)
-          .lte("data_referencia", date_to)
+          .gte("published_at", date_from)
+          .lt("published_at", nextDayIso(date_to))
       : Promise.resolve({ data: [], error: null }),
     wantFb
       ? mk
@@ -245,8 +252,8 @@ export async function getSocialPosts(
           .select(
             "post_id, data_referencia, post_type, permalink, message, published_at, reach, impressions, reactions_total, comments, shares, clicks, is_boosted, ad_spend, ad_impressions, ad_reach",
           )
-          .gte("data_referencia", date_from)
-          .lte("data_referencia", date_to)
+          .gte("published_at", date_from)
+          .lt("published_at", nextDayIso(date_to))
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -506,7 +513,7 @@ export async function getLatestReport(): Promise<MarketingReport | null> {
   const { data, error } = await marketingSchema(supabase)
     .from("marketing_reports")
     .select(REPORT_COLS)
-    .order("gerado_em", { ascending: false })
+    .order("gerado_em", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
@@ -529,7 +536,7 @@ export async function listReports(tipo?: ReportTipo): Promise<ReportListItem[]> 
   let q = marketingSchema(supabase)
     .from("marketing_reports")
     .select("id, tipo, model, periodo_inicio, periodo_fim, gerado_em")
-    .order("gerado_em", { ascending: false });
+    .order("gerado_em", { ascending: false, nullsFirst: false });
   if (tipo) q = q.eq("tipo", tipo);
   const { data, error } = await q;
   if (error) throw error;

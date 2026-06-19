@@ -29,9 +29,12 @@ export function PostThumbnail({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  // Vídeos/Reels do Instagram: usa a capa (thumbnail_url) em vez do .mp4.
+  const t = (mediaType ?? "").toUpperCase();
+  const isVideo = t.includes("VIDEO") || t.includes("REEL");
   const src =
     network === "instagram"
-      ? `/api/marketing/instagram-media/${encodeURIComponent(id)}`
+      ? `/api/marketing/instagram-media/${encodeURIComponent(id)}${isVideo ? "?thumb=1" : ""}`
       : null;
 
   const box = cn(

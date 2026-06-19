@@ -27,7 +27,9 @@ export default async function MidiaPagaInsightsPage({
 
   // O relatório (mais recente por padrão) define o período padrão do filtro.
   const reports = await listReports(tipo);
-  const targetId = reportId ?? reports[0]?.id;
+  // Usa o relatório da URL apenas se ainda existir na lista; senão, o mais recente.
+  const targetId =
+    reportId && reports.some((r) => r.id === reportId) ? reportId : reports[0]?.id;
   const report = targetId ? await getReportById(targetId) : null;
 
   const reportRange =
