@@ -149,6 +149,16 @@ export type Database = {
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
       };
+      alertas_inteligentes: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      alert_rules: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
     };
     Views: {
       v_events_roi: {
@@ -176,6 +186,19 @@ export type Database = {
         Args: { p_name: string; p_secret: string; p_description?: string | null };
         Returns: string;
       };
+      dashboard_content_kpis: { Args: { p_from: string; p_to: string }; Returns: Json };
+      dashboard_paid_kpis: { Args: { p_from: string; p_to: string }; Returns: Json };
+      dashboard_investment_kpis: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      dashboard_events_kpis: { Args: { p_from: string; p_to: string }; Returns: Json };
+      dashboard_insights_kpis: { Args: { p_from: string; p_to: string }; Returns: Json };
+      dashboard_competitors_kpis: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      dashboard_alerts_kpis: { Args: { p_from: string; p_to: string }; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
