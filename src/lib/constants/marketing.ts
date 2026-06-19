@@ -102,6 +102,48 @@ export const MARKETING_SUBMODULES: readonly MarketingSubmodule[] = [
       },
     ],
   },
+  {
+    slug: "concorrentes",
+    name: "Concorrentes",
+    href: "/modulos/marketing/concorrentes",
+    children: [
+      {
+        slug: "concorrentes-geral",
+        name: "Visão Geral",
+        href: "/modulos/marketing/concorrentes",
+      },
+      {
+        slug: "concorrentes-redes-sociais",
+        name: "Redes Sociais",
+        href: "/modulos/marketing/concorrentes/redes-sociais",
+      },
+      {
+        slug: "concorrentes-youtube",
+        name: "YouTube",
+        href: "/modulos/marketing/concorrentes/youtube",
+      },
+      {
+        slug: "concorrentes-busca",
+        name: "Busca & Tendências",
+        href: "/modulos/marketing/concorrentes/busca",
+      },
+      {
+        slug: "concorrentes-anuncios",
+        name: "Anúncios",
+        href: "/modulos/marketing/concorrentes/anuncios",
+      },
+      {
+        slug: "concorrentes-noticias",
+        name: "Notícias",
+        href: "/modulos/marketing/concorrentes/noticias",
+      },
+      {
+        slug: "concorrentes-reputacao",
+        name: "Reputação",
+        href: "/modulos/marketing/concorrentes/reputacao",
+      },
+    ],
+  },
 ] as const;
 
 export const POST_STATUSES: PostStatus[] = [
