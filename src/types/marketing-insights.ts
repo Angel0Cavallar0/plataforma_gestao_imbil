@@ -189,7 +189,12 @@ export type MentionsData = {
 // Relatórios de IA (marketing.marketing_reports → report_json)
 // ---------------------------------------------------------------------------
 
-export type ReportTipo = "on_demand" | "weekly_auto" | "month_auto";
+export type ReportTipo =
+  | "on_demand"
+  | "weekly_auto"
+  | "weekly_on_demand"
+  | "month_auto"
+  | "month_on_demand";
 export type ReportScope =
   | "redes_sociais"
   | "midia_paga"

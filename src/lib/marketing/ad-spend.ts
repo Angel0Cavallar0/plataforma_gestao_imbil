@@ -29,9 +29,16 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/** Lê e normaliza os filtros a partir dos searchParams da rota. */
-export function parseAdSpendFilters(params: RawSearchParams): AdSpendFilters {
-  const def = defaultDateRange();
+/**
+ * Lê e normaliza os filtros a partir dos searchParams da rota. Quando não há
+ * datas na URL, usa `fallback` (ex.: período do relatório selecionado) ou, na
+ * ausência dele, o mês atual.
+ */
+export function parseAdSpendFilters(
+  params: RawSearchParams,
+  fallback?: { date_from: string; date_to: string },
+): AdSpendFilters {
+  const def = fallback ?? defaultDateRange();
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
   const fromRaw = firstParam(params.date_from);

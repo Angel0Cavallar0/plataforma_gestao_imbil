@@ -24,7 +24,14 @@ function rangeFromFilters(filters: Filters): DateRange {
  * são aplicadas (gravadas na URL, preservando demais params) ao clicar em
  * "Aplicar".
  */
-export function InsightsFilters({ filters }: { filters: Filters }) {
+export function InsightsFilters({
+  filters,
+  defaultRange,
+}: {
+  filters: Filters;
+  /** Período padrão (ex.: do relatório selecionado) usado em "Limpar". */
+  defaultRange?: Filters;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -53,7 +60,7 @@ export function InsightsFilters({ filters }: { filters: Filters }) {
   }
 
   function clear() {
-    const d = defaultInsightsRange();
+    const d = defaultRange ?? defaultInsightsRange();
     setRange({ from: fromIsoDate(d.date_from), to: fromIsoDate(d.date_to) });
     const params = new URLSearchParams(searchParams.toString());
     params.delete("date_from");
@@ -71,7 +78,7 @@ export function InsightsFilters({ filters }: { filters: Filters }) {
         ? `${format(range.from, "dd/MM/yyyy", { locale: ptBR })} – …`
         : "Selecionar período";
 
-  const def = defaultInsightsRange();
+  const def = defaultRange ?? defaultInsightsRange();
   const isDefaultView =
     !!range?.from &&
     !!range?.to &&

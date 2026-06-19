@@ -3,8 +3,9 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { REPORT_TIPO_LABELS } from "@/lib/constants/marketing-insights";
-import type { ReportListItem, ReportTipo } from "@/types/marketing-insights";
+import { ReportMarkdownDialog } from "@/components/marketing/insights/ReportMarkdownDialog";
+import { REPORT_TIPOS, reportTipoLabel } from "@/lib/constants/marketing-insights";
+import type { ReportListItem } from "@/types/marketing-insights";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -23,33 +24,43 @@ function fmtDateTime(iso: string): string {
   });
 }
 
-/** Seletor de relatórios por tipo/período, com badge do modelo (Seção 6.4). */
+/**
+ * Seletor de relatórios (tipo/período) + tag do tipo + modelo + "ver completo".
+ * Fica junto ao filtro de data: ao trocar de relatório/tipo, as datas são
+ * removidas da URL para que o período volte ao padrão do relatório selecionado.
+ */
 export function ReportSelector({
   reports,
   selectedId,
   model,
+  markdown,
 }: {
   reports: ReportListItem[];
   selectedId: string | null;
   model: string | null;
+  markdown: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tipo = searchParams.get("tipo") ?? "";
 
+  const selectedTipo = reports.find((r) => r.id === selectedId)?.tipo ?? null;
+
   function update(next: { tipo?: string | null; report?: string | null }) {
     const p = new URLSearchParams(searchParams.toString());
     if (next.tipo !== undefined) {
       if (next.tipo) p.set("tipo", next.tipo);
       else p.delete("tipo");
-      // ao trocar o tipo, volta para o mais recente do tipo
-      p.delete("report");
+      p.delete("report"); // troca de tipo → volta ao mais recente do tipo
     }
     if (next.report !== undefined) {
       if (next.report) p.set("report", next.report);
       else p.delete("report");
     }
+    // O período passa a seguir o relatório selecionado (padrão).
+    p.delete("date_from");
+    p.delete("date_to");
     const qs = p.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
@@ -64,9 +75,9 @@ export function ReportSelector({
           className="h-9 w-44"
         >
           <option value="">Todos os tipos</option>
-          {(Object.keys(REPORT_TIPO_LABELS) as ReportTipo[]).map((t) => (
+          {REPORT_TIPOS.map((t) => (
             <option key={t} value={t}>
-              {REPORT_TIPO_LABELS[t]}
+              {reportTipoLabel(t)}
             </option>
           ))}
         </Select>
@@ -86,18 +97,20 @@ export function ReportSelector({
             reports.map((r) => (
               <option key={r.id} value={r.id}>
                 {fmtDate(r.periodo_inicio)}–{fmtDate(r.periodo_fim)} ·{" "}
-                {REPORT_TIPO_LABELS[r.tipo]} · {fmtDateTime(r.gerado_em)}
+                {fmtDateTime(r.gerado_em)}
               </option>
             ))
           )}
         </Select>
       </label>
 
-      {model && (
-        <Badge variant="muted" className="mb-1">
-          Modelo: {model}
-        </Badge>
-      )}
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        {selectedTipo && (
+          <Badge variant="secondary">{reportTipoLabel(selectedTipo)}</Badge>
+        )}
+        {model && <Badge variant="muted">Modelo: {model}</Badge>}
+        <ReportMarkdownDialog markdown={markdown} />
+      </div>
     </div>
   );
 }

@@ -22,12 +22,29 @@ export const NETWORK_SLUGS: readonly SocialNetwork[] = [
 
 export const YOUTUBE_COLOR = "#FF0000";
 
-/** Rótulos amigáveis do tipo de relatório. */
+/** Rótulos amigáveis do tipo (tag) de relatório. */
 export const REPORT_TIPO_LABELS: Record<ReportTipo, string> = {
   on_demand: "Sob demanda",
   weekly_auto: "Semanal (auto)",
+  weekly_on_demand: "Semanal (sob demanda)",
   month_auto: "Mensal (auto)",
+  month_on_demand: "Mensal (sob demanda)",
 };
+
+/** Tipos exibidos no filtro (na ordem). */
+export const REPORT_TIPOS: ReportTipo[] = [
+  "weekly_auto",
+  "weekly_on_demand",
+  "month_auto",
+  "month_on_demand",
+  "on_demand",
+];
+
+/** Rótulo do tipo com fallback para o valor cru (tags futuras do n8n). */
+export function reportTipoLabel(tipo: string | null | undefined): string {
+  if (!tipo) return "—";
+  return REPORT_TIPO_LABELS[tipo as ReportTipo] ?? tipo;
+}
 
 /** Severidade dos alertas → variante de Badge. */
 export const ALERT_URGENCIA_VARIANT: Record<

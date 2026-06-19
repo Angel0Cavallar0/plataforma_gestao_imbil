@@ -24,9 +24,16 @@ export function defaultInsightsRange(): InsightsFilters {
   return { date_from: toIsoDate(from), date_to: toIsoDate(to) };
 }
 
-/** Lê e normaliza o período a partir dos searchParams da rota. */
-export function parseInsightsFilters(params: RawSearchParams): InsightsFilters {
-  const def = defaultInsightsRange();
+/**
+ * Lê e normaliza o período a partir dos searchParams da rota. Quando não há
+ * datas na URL, usa `fallback` (ex.: o período do relatório selecionado) ou,
+ * na ausência dele, os últimos 30 dias.
+ */
+export function parseInsightsFilters(
+  params: RawSearchParams,
+  fallback?: InsightsFilters,
+): InsightsFilters {
+  const def = fallback ?? defaultInsightsRange();
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
   const fromRaw = firstParam(params.date_from);

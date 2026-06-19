@@ -1,8 +1,9 @@
 import { InsightsFilters } from "@/components/marketing/insights/InsightsFilters";
+import { ReportSelector } from "@/components/marketing/insights/ReportSelector";
 import { GenerateReportButton } from "@/components/marketing/insights/GenerateReportButton";
 import { SocialNetworkTabs } from "@/components/marketing/insights/social/SocialNetworkTabs";
 import { ReportPanel } from "@/components/marketing/insights/ReportPanel";
-import { parseInsightsFilters } from "@/lib/marketing/insights";
+import { defaultInsightsRange, parseInsightsFilters } from "@/lib/marketing/insights";
 import {
   getFollowersHistory,
   getInstagramExtra,
@@ -16,7 +17,7 @@ import {
   getRemainingReportQuota,
   getReportsWebhookUrl,
 } from "@/server/queries/marketing/reports-control";
-import type { ReportTipo } from "@/types/marketing-insights";
+import type { InsightsFilters as Filters, ReportTipo } from "@/types/marketing-insights";
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -28,23 +29,31 @@ export default async function RedesSociaisInsightsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const filters = parseInsightsFilters(sp);
   const reportId = first(sp.report);
   const tipo = first(sp.tipo) as ReportTipo | undefined;
 
-  const [overview, followersRows, posts, instagramExtra, reports, remaining, webhookUrl] =
+  // O relatório (mais recente por padrão) define o período padrão do filtro.
+  const reports = await listReports(tipo);
+  const targetId = reportId ?? reports[0]?.id;
+  const report = targetId ? await getReportById(targetId) : null;
+
+  const reportRange: Filters | undefined =
+    report?.periodo_inicio && report?.periodo_fim
+      ? { date_from: report.periodo_inicio, date_to: report.periodo_fim }
+      : undefined;
+  const defaultRange = reportRange ?? defaultInsightsRange();
+  const filters = parseInsightsFilters(sp, defaultRange);
+
+  const [overview, followersRows, posts, instagramExtra, remaining, webhookUrl] =
     await Promise.all([
       getSocialOverview(filters),
       getFollowersHistory(filters),
       getSocialPosts(filters),
       getInstagramExtra(filters),
-      listReports(tipo),
       getRemainingReportQuota(),
       getReportsWebhookUrl(),
     ]);
 
-  const targetId = reportId ?? reports[0]?.id;
-  const report = targetId ? await getReportById(targetId) : null;
   const enrichment = await enrichReportEntities(report?.report_json ?? null);
 
   return (
@@ -63,7 +72,15 @@ export default async function RedesSociaisInsightsPage({
         />
       </div>
 
-      <InsightsFilters filters={filters} />
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <InsightsFilters filters={filters} defaultRange={defaultRange} />
+        <ReportSelector
+          reports={reports}
+          selectedId={report?.id ?? null}
+          model={report?.model ?? null}
+          markdown={report?.report_markdown ?? null}
+        />
+      </div>
 
       <SocialNetworkTabs
         overview={overview}
@@ -77,7 +94,6 @@ export default async function RedesSociaisInsightsPage({
         scope="redes_sociais"
         report={report}
         enrichment={enrichment}
-        reports={reports}
       />
     </div>
   );
