@@ -69,24 +69,31 @@ export function GenerateReportButton({
         ? { data_inicio: toIsoDate(range.from), data_fim: toIsoDate(range.to) }
         : undefined;
 
+    // Mostra o pop-up e o estado "Gerando..." imediatamente ao clicar; o
+    // disparo do webhook segue em segundo plano. Se falhar, reverte e avisa.
+    setInfoOpen(true);
+    setGenerating(true);
+
     startTransition(async () => {
       const res = await requestMarketingReport(scope, period);
       if (res.ok) {
         setRemaining(res.remaining);
-        setGenerating(true);
-        setInfoOpen(true);
         window.dispatchEvent(new CustomEvent("mkt-report-requested"));
-      } else if (res.reason === "daily_limit") {
-        setRemaining(0);
-        toast.error(
-          `Limite diário de ${DAILY_REPORT_LIMIT} relatórios (global) atingido. Tente novamente amanhã.`,
-        );
-      } else if (res.reason === "not_configured") {
-        toast.error("Webhook de relatórios não configurado.");
-      } else if (res.reason === "forbidden") {
-        toast.error("Você não tem permissão para solicitar relatórios.");
       } else {
-        toast.error("Não foi possível solicitar agora.");
+        setInfoOpen(false);
+        setGenerating(false);
+        if (res.reason === "daily_limit") {
+          setRemaining(0);
+          toast.error(
+            `Limite diário de ${DAILY_REPORT_LIMIT} relatórios (global) atingido. Tente novamente amanhã.`,
+          );
+        } else if (res.reason === "not_configured") {
+          toast.error("Webhook de relatórios não configurado.");
+        } else if (res.reason === "forbidden") {
+          toast.error("Você não tem permissão para solicitar relatórios.");
+        } else {
+          toast.error("Não foi possível solicitar agora.");
+        }
       }
     });
   }
