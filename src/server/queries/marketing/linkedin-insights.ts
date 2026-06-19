@@ -15,7 +15,7 @@ export async function getLinkedInPostsForCalendar(filters?: {
   const supabase = await createClient();
   let q = marketingSchema(supabase)
     .from("linkedin_post_insights")
-    .select("post_id, data_referencia, published_at, text, permalink")
+    .select("post_id, data_referencia, published_at, text, permalink, post_type")
     .not("published_at", "is", null)
     .order("data_referencia", { ascending: false });
 
@@ -46,6 +46,7 @@ export async function getLinkedInPostsForCalendar(filters?: {
       platformName: "LinkedIn",
       platformColor: "#0A66C2",
       campaignColor: null,
+      mediaType: (row.post_type as string | null) ?? null,
     });
   }
 

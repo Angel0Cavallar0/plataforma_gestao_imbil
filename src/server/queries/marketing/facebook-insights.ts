@@ -42,6 +42,7 @@ export async function getFacebookPostsForCalendar(filters?: {
       platformName: "Facebook",
       platformColor: "#1877F2",
       campaignColor: null,
+      mediaType: (row.post_type as string | null) ?? null,
     });
   }
 

@@ -15,17 +15,18 @@ export async function resolveInstagramMediaForFacebookPost(
   facebookPostId: string,
 ): Promise<CrossPostInstagramPreview | null> {
   const link = await getCrossPostLinkByFacebookPostId(facebookPostId);
-  if (!link) return null;
+  if (!link?.instagram_media_id) return null;
 
+  const igMediaId = link.instagram_media_id;
   const [latest, carouselChildren] = await Promise.all([
-    getInstagramMediaLatest(link.instagram_media_id),
-    getInstagramCarouselChildren(link.instagram_media_id),
+    getInstagramMediaLatest(igMediaId),
+    getInstagramCarouselChildren(igMediaId),
   ]);
 
   if (!latest) return null;
 
   return {
-    instagramMediaId: link.instagram_media_id,
+    instagramMediaId: igMediaId,
     latest,
     carouselChildren,
   };
