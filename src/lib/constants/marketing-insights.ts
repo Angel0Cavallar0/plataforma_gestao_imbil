@@ -91,3 +91,85 @@ export const IG_MEDIA_TYPE_LABELS: Record<string, string> = {
   CAROUSEL_ALBUM: "Carrossel",
   REEL: "Reels",
 };
+
+/** Tipo de mídia (IG media_type) → rótulo curto. */
+export function igMediaKindLabel(mediaType: string | null | undefined): string {
+  const t = (mediaType ?? "").toUpperCase();
+  if (t.includes("CAROUSEL") || t.includes("ALBUM")) return "Carrossel";
+  if (t.includes("VIDEO")) return "Vídeo";
+  if (t.includes("IMAGE")) return "Imagem";
+  return IG_MEDIA_TYPE_LABELS[t] ?? "";
+}
+
+function titleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Tag do "tipo de postagem" por rede. */
+export function postTypeTag(
+  network: SocialNetwork,
+  mediaType: string | null | undefined,
+  mediaProductType?: string | null,
+): { tag: string; sub?: string } {
+  if (network === "instagram") {
+    const pt = (mediaProductType ?? "").toUpperCase();
+    const tag =
+      pt === "REELS"
+        ? "Reels"
+        : pt === "STORY"
+          ? "Story"
+          : pt === "FEED"
+            ? "Feed"
+            : pt
+              ? titleCase(pt)
+              : "Feed";
+    // Para o Feed, mostra também a mídia (imagem/vídeo/carrossel).
+    const sub = pt === "FEED" || !pt ? igMediaKindLabel(mediaType) : undefined;
+    return { tag, sub: sub || undefined };
+  }
+
+  if (network === "facebook") {
+    const t = (mediaType ?? "").toLowerCase();
+    const map: Record<string, string> = {
+      photo: "Foto",
+      video: "Vídeo",
+      reel: "Reels",
+      reels: "Reels",
+      text: "Texto",
+      status: "Texto",
+      link: "Link",
+      share: "Compartilhamento",
+      album: "Álbum",
+    };
+    return { tag: map[t] ?? (t ? titleCase(t) : "Publicação") };
+  }
+
+  // LinkedIn — post_type vem da resposta da API.
+  const t = (mediaType ?? "").toUpperCase();
+  const map: Record<string, string> = {
+    TEXT: "Texto",
+    NONE: "Texto",
+    IMAGE: "Imagem",
+    MULTI_IMAGE: "Múltiplas imagens",
+    MULTIIMAGE: "Múltiplas imagens",
+    VIDEO: "Vídeo",
+    LIVE_VIDEO: "Ao vivo",
+    LIVE: "Ao vivo",
+    ARTICLE: "Artigo",
+    DOCUMENT: "Documento",
+    CAROUSEL: "Carrossel",
+    POLL: "Enquete",
+    EVENT: "Evento",
+    NEWSLETTER: "Newsletter",
+    RICH: "Link",
+    RICH_MEDIA: "Link",
+    URL: "Link",
+    LINK: "Link",
+    URN_REFERENCE: "Compartilhamento",
+    RESHARE: "Compartilhamento",
+  };
+  return { tag: map[t] ?? (t ? titleCase(t) : "Publicação") };
+}

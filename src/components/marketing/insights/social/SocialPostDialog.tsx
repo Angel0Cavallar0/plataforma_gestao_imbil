@@ -9,9 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { PostThumbnail } from "@/components/marketing/insights/shared/PostThumbnail";
 import { InstagramCommentsPanel } from "@/components/marketing/calendar/InstagramCommentsPanel";
-import { NETWORKS } from "@/lib/constants/marketing-insights";
+import { NETWORKS, postTypeTag } from "@/lib/constants/marketing-insights";
 import { brl, int } from "@/lib/marketing/ad-spend";
 import { getSocialPostDetailAction } from "@/server/actions/marketing/social-posts";
 import type { SocialPost } from "@/types/marketing-insights";
@@ -50,6 +51,11 @@ const FIELD_LABELS: Record<string, string> = {
   ad_spend: "Investimento",
   ad_impressions: "Impressões pagas",
   ad_reach: "Alcance pago",
+  // LinkedIn
+  unique_impressions: "Impressões únicas",
+  engagement: "Engajamento",
+  video_completions: "Vídeo concluído",
+  video_view_rate: "Taxa de visualização",
 };
 
 /** Colunas exibidas fora da grade de métricas (cabeçalho) ou internas. */
@@ -68,6 +74,8 @@ const HIDDEN_FIELDS = new Set([
   "media_product_type",
   "instagram_media_id",
   "coletado_em",
+  "text",
+  "id",
 ]);
 
 function formatValue(key: string, val: unknown): string {
@@ -79,6 +87,10 @@ function formatValue(key: string, val: unknown): string {
         ? Number(val)
         : null;
   if (key.includes("spend")) return brl(num);
+  if (key.includes("rate") && num !== null) {
+    const p = num <= 1 ? num * 100 : num;
+    return `${p.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+  }
   if (num !== null) return key.includes("watch_time") ? `${num}s` : int(num);
   return String(val);
 }
@@ -138,8 +150,16 @@ export function SocialPostDialog({
   const mediaType = (detail?.media_type as string) ?? post.media_type;
   const publishedAt = (detail?.published_at as string) ?? post.published_at;
   const caption =
-    (detail?.caption as string) ?? (detail?.message as string) ?? post.caption;
+    (detail?.caption as string) ??
+    (detail?.message as string) ??
+    (detail?.text as string) ??
+    post.caption;
   const permalink = (detail?.permalink as string) ?? post.permalink;
+  const typeTag = postTypeTag(
+    post.network,
+    mediaType,
+    (detail?.media_product_type as string) ?? post.media_product_type,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,9 +171,12 @@ export function SocialPostDialog({
               style={{ backgroundColor: net.color }}
             />
             {net.name}
-            {mediaType && (
-              <span className="text-sm font-normal uppercase text-muted-foreground">
-                {mediaType}
+            <Badge variant="outline" className="text-xs font-medium">
+              {typeTag.tag}
+            </Badge>
+            {typeTag.sub && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {typeTag.sub}
               </span>
             )}
             {post.is_boosted && (

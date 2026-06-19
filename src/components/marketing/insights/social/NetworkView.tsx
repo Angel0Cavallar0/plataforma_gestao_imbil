@@ -56,16 +56,10 @@ export function NetworkView({
 
       <FollowersTrendChart rows={followersRows} networks={[net]} />
 
-      {net === "linkedin" ? (
-        <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-          Posts orgânicos do LinkedIn não são detalhados nesta visão.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Posts do período</h2>
-          <SocialPostsGrid posts={posts} />
-        </div>
-      )}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Posts do período</h2>
+        <SocialPostsGrid posts={posts} />
+      </div>
 
       {net === "instagram" && instagramExtra?.follower_demographics != null && (
         <DemographicsPanel demographics={instagramExtra.follower_demographics} />

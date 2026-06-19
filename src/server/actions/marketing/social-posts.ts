@@ -10,7 +10,7 @@ import { hasMarketingPermission } from "@/lib/auth/marketing";
  * pop-up de detalhes. Métricas são cumulativas → pega a maior data_referencia.
  */
 export async function getSocialPostDetailAction(
-  network: "instagram" | "facebook",
+  network: "instagram" | "facebook" | "linkedin",
   id: string,
 ): Promise<{ data?: Record<string, unknown>; error?: string }> {
   const session = await requireAuth();
@@ -23,7 +23,11 @@ export async function getSocialPostDetailAction(
   const mk = marketingSchema(supabase);
 
   const table =
-    network === "instagram" ? "instagram_media_insights" : "facebook_post_insights";
+    network === "instagram"
+      ? "instagram_media_insights"
+      : network === "facebook"
+        ? "facebook_post_insights"
+        : "linkedin_post_insights";
   const idColumn = network === "instagram" ? "media_id" : "post_id";
 
   const { data, error } = await mk

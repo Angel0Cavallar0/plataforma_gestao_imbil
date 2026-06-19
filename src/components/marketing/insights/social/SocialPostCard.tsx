@@ -13,9 +13,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { PostThumbnail } from "@/components/marketing/insights/shared/PostThumbnail";
 import { SocialPostDialog } from "@/components/marketing/insights/social/SocialPostDialog";
-import { NETWORKS } from "@/lib/constants/marketing-insights";
+import { NETWORKS, postTypeTag } from "@/lib/constants/marketing-insights";
 import { brl, int } from "@/lib/marketing/ad-spend";
 import { truncate } from "@/lib/marketing/insights";
 import type { SocialPost } from "@/types/marketing-insights";
@@ -43,6 +44,7 @@ export function SocialPostCard({ post }: { post: SocialPost }) {
   const [open, setOpen] = useState(false);
   const net = NETWORKS[post.network];
   const isVideo = (post.media_type ?? "").toUpperCase().includes("VIDEO");
+  const typeTag = postTypeTag(post.network, post.media_type, post.media_product_type);
 
   return (
     <>
@@ -75,8 +77,11 @@ export function SocialPostCard({ post }: { post: SocialPost }) {
                 />
                 {net.name}
               </span>
-              {post.media_type && (
-                <span className="text-xs text-muted-foreground">{post.media_type}</span>
+              <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-medium">
+                {typeTag.tag}
+              </Badge>
+              {typeTag.sub && (
+                <span className="text-xs text-muted-foreground">{typeTag.sub}</span>
               )}
               {post.published_at && (
                 <span className="text-xs text-muted-foreground">

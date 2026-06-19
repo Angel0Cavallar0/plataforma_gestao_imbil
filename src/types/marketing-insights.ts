@@ -51,14 +51,17 @@ export type FollowersHistoryRow = {
   followers_gained: number | null;
 };
 
-/** Post orgânico (Instagram ou Facebook) já agregado por post no período. */
+/** Post orgânico (Instagram, Facebook ou LinkedIn) já agregado por post no período. */
 export type SocialPost = {
-  network: "instagram" | "facebook";
+  network: "instagram" | "facebook" | "linkedin";
   id: string;
   permalink: string | null;
   thumbnail_url: string | null;
   caption: string | null;
+  /** IG: media_type (VIDEO/IMAGE/CAROUSEL_ALBUM); FB/LI: post_type. */
   media_type: string | null;
+  /** IG: media_product_type (FEED/REELS/STORY). Tipo de postagem. */
+  media_product_type: string | null;
   published_at: string | null;
   reach: number;
   impressions: number;

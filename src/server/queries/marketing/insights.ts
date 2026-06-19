@@ -224,10 +224,10 @@ export async function getInstagramExtra(
   };
 }
 
-/** Posts orgânicos (IG + FB) ativos no período, agregados por post. */
+/** Posts orgânicos (IG + FB + LinkedIn) publicados no período, agregados por post. */
 export async function getSocialPosts(
   filters: InsightsFilters,
-  network?: "instagram" | "facebook",
+  network?: "instagram" | "facebook" | "linkedin",
 ): Promise<SocialPost[]> {
   const supabase = await createClient();
   const mk = marketingSchema(supabase);
@@ -235,13 +235,14 @@ export async function getSocialPosts(
 
   const wantIg = !network || network === "instagram";
   const wantFb = !network || network === "facebook";
+  const wantLi = !network || network === "linkedin";
 
-  const [igRes, fbRes] = await Promise.all([
+  const [igRes, fbRes, liRes] = await Promise.all([
     wantIg
       ? mk
           .from("instagram_media_insights")
           .select(
-            "media_id, data_referencia, media_type, permalink, media_url, thumbnail_url, caption, published_at, reach, impressions, likes, comments, saves, shares, plays, is_boosted, ad_spend, ad_impressions, ad_reach",
+            "media_id, data_referencia, media_type, media_product_type, permalink, media_url, thumbnail_url, caption, published_at, reach, impressions, likes, comments, saves, shares, plays, is_boosted, ad_spend, ad_impressions, ad_reach",
           )
           .gte("published_at", date_from)
           .lt("published_at", nextDayIso(date_to))
@@ -255,10 +256,20 @@ export async function getSocialPosts(
           .gte("published_at", date_from)
           .lt("published_at", nextDayIso(date_to))
       : Promise.resolve({ data: [], error: null }),
+    wantLi
+      ? mk
+          .from("linkedin_post_insights")
+          .select(
+            "post_id, data_referencia, post_type, permalink, thumbnail_url, text, published_at, impressions, unique_impressions, clicks, likes, comments, shares, video_views",
+          )
+          .gte("published_at", date_from)
+          .lt("published_at", nextDayIso(date_to))
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (igRes.error) throw igRes.error;
   if (fbRes.error) throw fbRes.error;
+  if (liRes.error) throw liRes.error;
 
   const posts: SocialPost[] = [];
 
@@ -274,6 +285,7 @@ export async function getSocialPosts(
       thumbnail_url: ((r.thumbnail_url as string) || (r.media_url as string)) ?? null,
       caption: (r.caption as string) ?? null,
       media_type: (r.media_type as string) ?? null,
+      media_product_type: (r.media_product_type as string) ?? null,
       published_at: (r.published_at as string) ?? null,
       reach: num(r.reach as number),
       impressions: num(r.impressions as number),
@@ -303,6 +315,7 @@ export async function getSocialPosts(
       thumbnail_url: null,
       caption: (r.message as string) ?? null,
       media_type: (r.post_type as string) ?? null,
+      media_product_type: null,
       published_at: (r.published_at as string) ?? null,
       reach: num(r.reach as number),
       impressions: num(r.impressions as number),
@@ -317,6 +330,37 @@ export async function getSocialPosts(
       ad_spend: r.ad_spend == null ? null : Number(r.ad_spend),
       ad_impressions: r.ad_impressions == null ? null : Number(r.ad_impressions),
       ad_reach: r.ad_reach == null ? null : Number(r.ad_reach),
+    });
+  }
+
+  const liRows = (liRes.data ?? []) as Array<Record<string, unknown>>;
+  for (const r of latestPerId(
+    liRows as Array<{ data_referencia: string } & Record<string, unknown>>,
+    (r) => r.post_id as string,
+  )) {
+    const likes = num(r.likes as number);
+    posts.push({
+      network: "linkedin",
+      id: r.post_id as string,
+      permalink: (r.permalink as string) ?? null,
+      thumbnail_url: (r.thumbnail_url as string) ?? null,
+      caption: (r.text as string) ?? null,
+      media_type: (r.post_type as string) ?? null,
+      media_product_type: null,
+      published_at: (r.published_at as string) ?? null,
+      reach: num(r.unique_impressions as number),
+      impressions: num(r.impressions as number),
+      likes,
+      comments: num(r.comments as number),
+      shares: num(r.shares as number),
+      saves: 0,
+      plays: num(r.video_views as number),
+      reactions: likes,
+      clicks: num(r.clicks as number),
+      is_boosted: false,
+      ad_spend: null,
+      ad_impressions: null,
+      ad_reach: null,
     });
   }
 
