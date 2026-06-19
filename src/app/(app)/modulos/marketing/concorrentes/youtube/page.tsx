@@ -1,13 +1,12 @@
 import { CompetitorsTabs } from "@/components/marketing/competitors/CompetitorsTabs";
 import { CompetitorSelector } from "@/components/marketing/competitors/CompetitorSelector";
-import { YtSubscribersTrend } from "@/components/marketing/competitors/youtube/YtSubscribersTrend";
+import { YtSubscribersCards } from "@/components/marketing/competitors/youtube/YtSubscribersCards";
 import { YtVideosGrid } from "@/components/marketing/competitors/youtube/YtVideosGrid";
 import { CompetitorBars } from "@/components/marketing/competitors/shared/CompetitorBars";
 import { firstParam } from "@/lib/marketing/competitors";
 import {
   getCompetitors,
   getCompetitorsOverview,
-  getSubscribersTrend,
   getYoutubeVideos,
 } from "@/server/queries/marketing/competitors";
 
@@ -19,16 +18,11 @@ export default async function ConcorrentesYoutubePage({
   const sp = await searchParams;
   const competitorId = firstParam(sp.competitor);
 
-  const [competitors, overview, subscribers, videos] = await Promise.all([
+  const [competitors, overview, videos] = await Promise.all([
     getCompetitors(),
     getCompetitorsOverview(),
-    getSubscribersTrend(competitorId),
     getYoutubeVideos(competitorId, 60),
   ]);
-
-  const subsBars = overview
-    .filter((r) => r.yt_subscribers != null)
-    .map((r) => ({ name: r.name, value: r.yt_subscribers ?? 0 }));
 
   const avgViewsBars = overview
     .filter((r) => r.yt_views != null && r.yt_videos)
@@ -49,24 +43,18 @@ export default async function ConcorrentesYoutubePage({
       <CompetitorsTabs />
       <CompetitorSelector competitors={competitors} />
 
-      <YtSubscribersTrend points={subscribers} />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <CompetitorBars
-          title="Inscritos por concorrente"
-          seriesName="Inscritos"
-          data={subsBars}
-          emptyMessage="Sem dados de inscritos."
-          format="compact"
-        />
-        <CompetitorBars
-          title="Média de views por vídeo"
-          seriesName="Média de views"
-          data={avgViewsBars}
-          emptyMessage="Sem dados de visualizações."
-          format="compact"
-        />
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Inscritos no YouTube</h2>
+        <YtSubscribersCards rows={overview} />
       </div>
+
+      <CompetitorBars
+        title="Média de views por vídeo"
+        seriesName="Média de views"
+        data={avgViewsBars}
+        emptyMessage="Sem dados de visualizações."
+        format="compact"
+      />
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Vídeos recentes</h2>

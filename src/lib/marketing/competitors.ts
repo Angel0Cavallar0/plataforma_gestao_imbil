@@ -15,9 +15,15 @@ const PALETTE = [
 /** Cor de destaque da própria Imbil (benchmark) — vermelho padrão do site (--destructive). */
 export const IMBIL_COLOR = "#dc2626";
 
+/** Overrides de cor por nome de empresa (cores fixas independentes do índice). */
+const COLOR_OVERRIDES: Record<string, string> = {
+  Flowserve: "#eab308", // tom amarelado
+};
+
 /** Cor estável e determinística por nome de empresa. Imbil sempre destacada. */
 export function competitorColor(name: string, index: number): string {
   if (name === IMBIL_NAME) return IMBIL_COLOR;
+  if (COLOR_OVERRIDES[name]) return COLOR_OVERRIDES[name];
   return PALETTE[index % PALETTE.length];
 }
 
