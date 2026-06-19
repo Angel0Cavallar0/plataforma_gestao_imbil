@@ -164,6 +164,12 @@ export type CalendarPostEvent = {
   campaignColor: string | null;
   /** Present for content_post — used to dedupe against instagram media_id */
   externalPostId?: string | null;
+  /** Tipo planejado do post da plataforma (content_posts.content_type). */
+  contentType?: ContentType | null;
+  /** Tipo de mídia das tabelas de insights (IG: media_type; FB/LI: post_type). */
+  mediaType?: string | null;
+  /** Instagram: media_product_type (FEED/REELS/STORY) para derivar Reels/Story. */
+  mediaProductType?: string | null;
 };
 
 export type LinkedInPostInsightRow = {
@@ -276,8 +282,9 @@ export type FacebookPostInsightRow = {
 
 export type CrossPostLink = {
   id: string;
-  facebook_post_id: string;
-  instagram_media_id: string;
+  facebook_post_id: string | null;
+  instagram_media_id: string | null;
+  linkedin_post_id: string | null;
   linked_at: string;
   match_method: string;
 };

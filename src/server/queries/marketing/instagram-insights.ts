@@ -14,7 +14,9 @@ export async function getInstagramMediaForCalendar(filters?: {
   const supabase = await createClient();
   let q = marketingSchema(supabase)
     .from("instagram_media_insights")
-    .select("media_id, data_referencia, published_at, caption, media_type, permalink")
+    .select(
+      "media_id, data_referencia, published_at, caption, media_type, media_product_type, permalink",
+    )
     .not("published_at", "is", null)
     .order("data_referencia", { ascending: false });
 
@@ -43,6 +45,8 @@ export async function getInstagramMediaForCalendar(filters?: {
       platformName: "Instagram",
       platformColor: "#E4405F",
       campaignColor: null,
+      mediaType: (row.media_type as string | null) ?? null,
+      mediaProductType: (row.media_product_type as string | null) ?? null,
     });
   }
 

@@ -67,21 +67,23 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
               </summary>
               <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-2">
                 {mod.slug === "marketing" ? (
-                  MARKETING_SUBMODULES.map((sub) =>
-                    sub.children ? (
-                      <details
-                        key={sub.slug}
-                        className="group/sub"
-                        open={
-                          pathname === sub.href || pathname.startsWith(sub.href + "/")
-                        }
-                      >
+                  MARKETING_SUBMODULES.map((sub) => {
+                    // Grupo ativo quando a própria rota OU qualquer filho casa
+                    // (filhos podem não compartilhar prefixo com o href do grupo).
+                    const groupActive =
+                      !!sub.children &&
+                      (pathname === sub.href ||
+                        pathname.startsWith(sub.href + "/") ||
+                        sub.children.some(
+                          (c) =>
+                            pathname === c.href || pathname.startsWith(c.href + "/"),
+                        ));
+                    return sub.children ? (
+                      <details key={sub.slug} className="group/sub" open={groupActive}>
                         <summary
                           className={cn(
                             "flex cursor-pointer list-none items-center rounded-md px-2 py-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground [&::-webkit-details-marker]:hidden",
-                            pathname === sub.href || pathname.startsWith(sub.href + "/")
-                              ? "text-sidebar-foreground"
-                              : "",
+                            groupActive ? "text-sidebar-foreground" : "",
                           )}
                         >
                           <span className="flex-1">{sub.name}</span>
@@ -132,8 +134,8 @@ export function AppSidebar({ profile, nav }: AppSidebarProps) {
                       >
                         {sub.name}
                       </Link>
-                    ),
-                  )
+                    );
+                  })
                 ) : (
                   <>
                     <Link

@@ -173,3 +173,51 @@ export function postTypeTag(
   };
   return { tag: map[t] ?? (t ? titleCase(t) : "Publicação") };
 }
+
+/**
+ * Tipo de conteúdo "amigável" em um único rótulo (Reels, Story, Carrossel,
+ * Vídeo, Imagem, Texto, …), combinando os campos de cada rede. Usado nas tags
+ * do calendário e na lista de Conteúdos Postados (derivação da instrução §2.2):
+ *   IG: media_product_type REELS/STORY → Reels/Story; senão media_type
+ *       CAROUSEL_ALBUM/VIDEO/IMAGE → Carrossel/Vídeo/Imagem.
+ *   FB: video → Vídeo, photo → Imagem.
+ *   LinkedIn: IMAGE → Imagem, VIDEO → Vídeo, TEXT → Texto.
+ */
+export function friendlyContentType(
+  network: SocialNetwork,
+  mediaType: string | null | undefined,
+  mediaProductType?: string | null,
+): string {
+  if (network === "instagram") {
+    const pt = (mediaProductType ?? "").toUpperCase();
+    if (pt === "REELS") return "Reels";
+    if (pt === "STORY") return "Story";
+    const t = (mediaType ?? "").toUpperCase();
+    if (t.includes("CAROUSEL") || t.includes("ALBUM")) return "Carrossel";
+    if (t.includes("VIDEO")) return "Vídeo";
+    if (t.includes("IMAGE")) return "Imagem";
+    return "Publicação";
+  }
+
+  if (network === "facebook") {
+    const t = (mediaType ?? "").toLowerCase();
+    if (t.startsWith("reel")) return "Reels";
+    if (t === "video") return "Vídeo";
+    if (t === "photo" || t === "album") return "Imagem";
+    if (t === "text" || t === "status") return "Texto";
+    if (t === "link" || t === "share") return "Link";
+    return t ? titleCase(t) : "Publicação";
+  }
+
+  // LinkedIn
+  const t = (mediaType ?? "").toUpperCase();
+  if (t === "VIDEO" || t === "LIVE_VIDEO" || t === "LIVE") return "Vídeo";
+  if (t === "IMAGE") return "Imagem";
+  if (t === "MULTI_IMAGE" || t === "MULTIIMAGE" || t === "CAROUSEL")
+    return "Carrossel";
+  if (t === "ARTICLE") return "Artigo";
+  if (t === "POLL") return "Enquete";
+  if (t === "DOCUMENT") return "Documento";
+  if (t === "" || t === "TEXT" || t === "NONE") return "Texto";
+  return titleCase(t);
+}

@@ -9,6 +9,9 @@ import type { EventClickArg, EventDropArg, EventMountArg } from "@fullcalendar/c
 import { useRouter } from "next/navigation";
 import { reschedulePostAction } from "@/server/actions/marketing/content";
 import type { CalendarPostEvent } from "@/types/marketing";
+import type { SocialNetwork } from "@/types/marketing-insights";
+import { CONTENT_TYPE_LABELS } from "@/lib/constants/marketing";
+import { friendlyContentType } from "@/lib/constants/marketing-insights";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -38,6 +41,24 @@ function eventStatusClass(e: CalendarPostEvent): string {
   if (e.eventSource === "facebook_post") return "fc-event-status-facebook";
   if (e.eventSource === "linkedin_post") return "fc-event-status-linkedin";
   return `fc-event-status-${e.status}`;
+}
+
+function eventNetwork(e: CalendarPostEvent): SocialNetwork | null {
+  if (e.eventSource === "instagram_media") return "instagram";
+  if (e.eventSource === "facebook_post") return "facebook";
+  if (e.eventSource === "linkedin_post") return "linkedin";
+  const s = (e.platformSlug ?? "").toLowerCase();
+  return s === "instagram" || s === "facebook" || s === "linkedin" ? s : null;
+}
+
+/** Tag curta do tipo de conteúdo (Reels, Story, Carrossel, Imagem, …). */
+function eventTypeLabel(e: CalendarPostEvent): string | null {
+  if (e.eventSource === "content_post") {
+    return e.contentType ? (CONTENT_TYPE_LABELS[e.contentType] ?? null) : null;
+  }
+  const net = eventNetwork(e);
+  if (!net) return null;
+  return friendlyContentType(net, e.mediaType ?? null, e.mediaProductType ?? null);
 }
 
 function applyEventColors(el: HTMLElement, bg: string) {
@@ -192,6 +213,22 @@ export function ContentCalendar({ events }: { events: CalendarPostEvent[] }) {
           eventClick={onEventClick}
           eventDrop={onEventDrop}
           eventDidMount={onEventDidMount}
+          eventContent={(arg) => {
+            const e = arg.event.extendedProps as CalendarPostEvent;
+            const type = eventTypeLabel(e);
+            return (
+              <div className="flex w-full items-center gap-1 overflow-hidden px-0.5">
+                {type ? (
+                  <span className="shrink-0 rounded-sm bg-white/25 px-1 text-[10px] font-semibold uppercase leading-tight tracking-wide">
+                    {type}
+                  </span>
+                ) : null}
+                <span className="truncate text-[11px] leading-tight">
+                  {arg.event.title}
+                </span>
+              </div>
+            );
+          }}
           height="auto"
           dayMaxEvents={false}
           slotMinTime="06:00:00"
