@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ type SortKey = "recent" | "rating";
 
 /** Feed de menções (cards resumidos + pop-up) com filtros e marcação de respondido. */
 export function MentionsFeed({ data }: { data: MentionsData }) {
+  const router = useRouter();
   const [platform, setPlatform] = useState<string>("all");
   const [onlyRated, setOnlyRated] = useState(false);
   const [onlyPending, setOnlyPending] = useState(false);
@@ -50,6 +52,9 @@ export function MentionsFeed({ data }: { data: MentionsData }) {
       setPendingId(null);
       if (res.ok) {
         toast.success(next ? "Marcada como respondida." : "Marcada como pendente.");
+        // Atualiza o snapshot do servidor (KPI "Interações respondidas") sem
+        // descartar o estado local: o dataKey não muda num toggle.
+        router.refresh();
       } else {
         setItems((prev) =>
           prev.map((m) => (m.id === id ? { ...m, respondida: !next } : m)),

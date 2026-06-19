@@ -13,9 +13,13 @@ export function SentimentDistribution({ data }: { data: MentionsData }) {
   const maxPlatform = Math.max(1, ...data.byPlatform.map((p) => p.count));
   const maxRating = Math.max(1, ...data.ratingDistribution.map((r) => r.count));
 
+  const responded = data.mentions.filter((m) => m.respondida).length;
+  const pending = data.total - responded;
+  const pctResponded = data.total > 0 ? Math.round((responded / data.total) * 100) : 0;
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <InsightKpiCard label="Total de menções" value={int(data.total)} />
         <InsightKpiCard
           label="Avaliações Google"
@@ -35,6 +39,21 @@ export function SentimentDistribution({ data }: { data: MentionsData }) {
           label="Plataformas"
           value={int(data.byPlatform.length)}
           sub="com menções no período"
+        />
+        <InsightKpiCard
+          label="Interações respondidas"
+          value={`${int(responded)}/${int(data.total)}`}
+          sub={
+            <>
+              {int(pending)} a responder · {pctResponded}% respondidas
+              <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <span
+                  className="block h-full rounded-full bg-green-500"
+                  style={{ width: `${pctResponded}%` }}
+                />
+              </span>
+            </>
+          }
         />
       </div>
 
