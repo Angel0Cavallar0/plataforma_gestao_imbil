@@ -3,10 +3,7 @@ import {
   Bookmark,
   ExternalLink,
   Eye,
-  Facebook,
   Heart,
-  Instagram,
-  Linkedin,
   MessageCircle,
   MousePointerClick,
   Play,
@@ -21,11 +18,15 @@ import { int } from "@/lib/marketing/ad-spend";
 import type { CrossPostLookup } from "@/server/queries/marketing/cross-posts";
 import type { SocialNetwork, SocialPost } from "@/types/marketing-insights";
 
-const NETWORK_ICON: Record<SocialNetwork, LucideIcon> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  linkedin: Linkedin,
-};
+function NetworkDot({ network }: { network: SocialNetwork }) {
+  return (
+    <span
+      className="inline-block h-2 w-2 shrink-0 rounded-full"
+      style={{ backgroundColor: NETWORKS[network].color }}
+      aria-hidden
+    />
+  );
+}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -84,19 +85,14 @@ function PostMetrics({ post }: { post: SocialPost }) {
 function CrossPostBadge({ networks }: { networks: SocialNetwork[] }) {
   if (networks.length === 0) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
       Também em
-      {networks.map((n) => {
-        const Icon = NETWORK_ICON[n];
-        return (
-          <Icon
-            key={n}
-            className="h-3 w-3"
-            style={{ color: NETWORKS[n].color }}
-            aria-label={NETWORKS[n].name}
-          />
-        );
-      })}
+      {networks.map((n) => (
+        <span key={n} className="inline-flex items-center gap-0.5">
+          <NetworkDot network={n} />
+          {NETWORKS[n].name}
+        </span>
+      ))}
     </span>
   );
 }
@@ -109,7 +105,6 @@ function ContentPostRow({
   crossPost: SocialNetwork[];
 }) {
   const net = NETWORKS[post.network];
-  const NetIcon = NETWORK_ICON[post.network];
   const type = friendlyContentType(
     post.network,
     post.media_type,
@@ -130,8 +125,8 @@ function ContentPostRow({
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1 text-xs font-medium">
-            <NetIcon className="h-3.5 w-3.5" style={{ color: net.color }} />
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <NetworkDot network={post.network} />
             {net.name}
           </span>
           <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-medium">

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NETWORKS } from "@/lib/constants/marketing-insights";
 import type { SocialNetwork } from "@/types/marketing-insights";
 
@@ -23,13 +23,18 @@ export function ContentPostsFilters({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const params = useSearchParams();
 
-  function update(key: string, value: string) {
-    const sp = new URLSearchParams(params.toString());
-    if (value) sp.set(key, value);
-    else sp.delete(key);
-    router.push(`${pathname}?${sp.toString()}`);
+  // Reconstrói a URL a partir do estado atual (props) + a alteração do campo.
+  function go(next: { month?: string; network?: string; type?: string }) {
+    const sp = new URLSearchParams();
+    const m = next.month ?? month;
+    const n = next.network ?? network ?? "";
+    const t = next.type ?? type ?? "";
+    if (m) sp.set("month", m);
+    if (n) sp.set("network", n);
+    if (t) sp.set("type", t);
+    const qs = sp.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
   return (
@@ -39,7 +44,7 @@ export function ContentPostsFilters({
         <input
           type="month"
           value={month}
-          onChange={(e) => update("month", e.target.value)}
+          onChange={(e) => go({ month: e.target.value })}
           className={SELECT_CLASS}
         />
       </label>
@@ -48,7 +53,7 @@ export function ContentPostsFilters({
         Rede
         <select
           value={network ?? ""}
-          onChange={(e) => update("network", e.target.value)}
+          onChange={(e) => go({ network: e.target.value })}
           className={SELECT_CLASS}
         >
           <option value="">Todas</option>
@@ -64,7 +69,7 @@ export function ContentPostsFilters({
         Tipo
         <select
           value={type ?? ""}
-          onChange={(e) => update("type", e.target.value)}
+          onChange={(e) => go({ type: e.target.value })}
           className={SELECT_CLASS}
         >
           <option value="">Todos</option>
