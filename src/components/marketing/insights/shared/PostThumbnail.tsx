@@ -22,11 +22,14 @@ export function PostThumbnail({
   id,
   mediaType,
   className,
+  fit = "cover",
 }: {
   network: "instagram" | "facebook" | "linkedin";
   id: string;
   mediaType?: string | null;
   className?: string;
+  /** "cover" (recorta, padrão do grid) ou "contain" (mostra a imagem inteira). */
+  fit?: "cover" | "contain";
 }) {
   const [failed, setFailed] = useState(false);
   // Vídeos/Reels do Instagram: usa a capa (thumbnail_url) em vez do .mp4.
@@ -56,7 +59,10 @@ export function PostThumbnail({
       <img
         src={src}
         alt=""
-        className="h-full w-full object-cover"
+        className={cn(
+          "h-full w-full",
+          fit === "contain" ? "object-contain" : "object-cover",
+        )}
         loading="lazy"
         onError={() => setFailed(true)}
       />

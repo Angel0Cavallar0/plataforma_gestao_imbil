@@ -143,7 +143,7 @@ export function SocialPostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span
@@ -165,63 +165,69 @@ export function SocialPostDialog({
           <DialogDescription>Publicado em {fmtDateTime(publishedAt)}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex gap-4">
+        <div className="grid gap-6 md:grid-cols-[340px_minmax(0,1fr)]">
+          {/* Esquerda: preview inteiro */}
+          <div className="space-y-3">
             <PostThumbnail
               network={post.network}
               id={post.id}
               mediaType={mediaType}
-              className="h-32 w-32"
+              fit="contain"
+              className="h-[24rem] w-full bg-muted"
             />
-            <div className="min-w-0 flex-1 space-y-2">
-              {caption && (
+            {permalink && (
+              <a
+                href={permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                Abrir publicação <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+
+          {/* Direita: informações em cards */}
+          <div className="min-w-0 space-y-4">
+            {caption && (
+              <div className="rounded-lg border bg-card p-3">
                 <p className="max-h-32 overflow-y-auto whitespace-pre-wrap text-sm text-foreground/90">
                   {caption}
                 </p>
+              </div>
+            )}
+
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Métricas</h3>
+              {loading && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Carregando dados…
+                </p>
               )}
-              {permalink && (
-                <a
-                  href={permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                >
-                  Abrir publicação <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+              {error && !loading && <p className="text-sm text-destructive">{error}</p>}
+              {!loading && entries.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {entries.map(([k, v]) => (
+                    <div key={k} className="rounded-lg border bg-card p-3">
+                      <p className="text-xs text-muted-foreground">{label(k)}</p>
+                      <p className="text-lg font-semibold tabular-nums">
+                        {formatValue(k, v)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!loading && !error && entries.length === 0 && (
+                <p className="text-sm text-muted-foreground">Sem métricas disponíveis.</p>
               )}
             </div>
-          </div>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Métricas</h3>
-            {loading && (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Carregando dados…
-              </p>
-            )}
-            {error && !loading && <p className="text-sm text-destructive">{error}</p>}
-            {!loading && entries.length > 0 && (
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-                {entries.map(([k, v]) => (
-                  <div key={k} className="flex flex-col">
-                    <dt className="text-xs text-muted-foreground">{label(k)}</dt>
-                    <dd className="text-sm font-medium tabular-nums">
-                      {formatValue(k, v)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {!loading && !error && entries.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sem métricas disponíveis.</p>
+            {post.network === "instagram" && (
+              <div className="rounded-lg border bg-card p-3">
+                <InstagramCommentsPanel mediaId={post.id} />
+              </div>
             )}
           </div>
-
-          {post.network === "instagram" && (
-            <div className="border-t pt-4">
-              <InstagramCommentsPanel mediaId={post.id} />
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>
