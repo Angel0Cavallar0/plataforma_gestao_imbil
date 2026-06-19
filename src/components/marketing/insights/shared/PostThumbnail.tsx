@@ -1,21 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Film, ImageIcon, Images } from "lucide-react";
+import { Film, FileText, ImageIcon, Images } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function TypeIcon({ mediaType }: { mediaType?: string | null }) {
   const t = (mediaType ?? "").toUpperCase();
   if (t.includes("VIDEO") || t.includes("REEL"))
     return <Film className="h-6 w-6 text-muted-foreground" />;
-  if (t.includes("CAROUSEL") || t.includes("ALBUM"))
+  if (t.includes("CAROUSEL") || t.includes("ALBUM") || t.includes("MULTI"))
     return <Images className="h-6 w-6 text-muted-foreground" />;
+  if (t === "TEXT" || t === "NONE" || t === "ARTICLE" || t === "DOCUMENT" || t === "POLL")
+    return <FileText className="h-6 w-6 text-muted-foreground" />;
   return <ImageIcon className="h-6 w-6 text-muted-foreground" />;
 }
 
+// Tipos do LinkedIn sem imagem de capa → vão direto para o placeholder.
+const LINKEDIN_NO_THUMB = new Set(["TEXT", "NONE", "POLL"]);
+
 /**
- * Miniatura de um post. Instagram usa o proxy interno (CSP-safe e gated por
- * marketing.read); Facebook não tem thumbnail → placeholder com ícone do tipo.
+ * Miniatura de um post. Instagram e LinkedIn usam proxies internos (CSP-safe e
+ * gated por marketing.read); Facebook não tem thumbnail → placeholder com ícone
+ * do tipo. Falhas de carregamento caem no placeholder.
  */
 export function PostThumbnail({
   network,
@@ -38,7 +44,9 @@ export function PostThumbnail({
   const src =
     network === "instagram"
       ? `/api/marketing/instagram-media/${encodeURIComponent(id)}${isVideo ? "?thumb=1" : ""}`
-      : null;
+      : network === "linkedin" && !LINKEDIN_NO_THUMB.has(t)
+        ? `/api/marketing/linkedin-post/${encodeURIComponent(id)}`
+        : null;
 
   const box = cn(
     "flex shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted",
