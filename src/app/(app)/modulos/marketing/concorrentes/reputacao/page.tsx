@@ -53,7 +53,7 @@ export default async function ConcorrentesReputacaoPage({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_2fr]">
         <StarDistribution reviews={reviews} />
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">Avaliações</h2>

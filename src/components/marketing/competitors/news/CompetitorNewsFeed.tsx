@@ -23,15 +23,6 @@ export function CompetitorNewsFeed({
         <Card key={n.id} className="flex gap-4 p-4">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {n.favicon_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={n.favicon_url}
-                  alt=""
-                  className="h-4 w-4 rounded"
-                  loading="lazy"
-                />
-              ) : null}
               <span>{n.source_name ?? "—"}</span>
               <span>•</span>
               <span>{formatDate(n.published_at)}</span>
