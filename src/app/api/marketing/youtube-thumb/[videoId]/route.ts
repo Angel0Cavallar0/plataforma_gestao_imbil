@@ -36,9 +36,22 @@ export async function GET(
     .limit(1)
     .maybeSingle();
 
+  let resolved = (data as { thumbnail_url?: string } | null)?.thumbnail_url ?? null;
+
+  // Fallback para vídeos de concorrentes (mesma estrutura, outra tabela).
+  if (!resolved) {
+    const { data: comp } = await marketingSchema(supabase)
+      .from("competitor_youtube_videos")
+      .select("thumbnail_url")
+      .eq("video_id", decodedId)
+      .order("collected_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    resolved = (comp as { thumbnail_url?: string } | null)?.thumbnail_url ?? null;
+  }
+
   const thumbnailUrl =
-    (data as { thumbnail_url?: string } | null)?.thumbnail_url ??
-    `https://i.ytimg.com/vi/${encodeURIComponent(decodedId)}/hqdefault.jpg`;
+    resolved ?? `https://i.ytimg.com/vi/${encodeURIComponent(decodedId)}/hqdefault.jpg`;
 
   const upstream = await fetch(thumbnailUrl, {
     headers: {
