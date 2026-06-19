@@ -5,7 +5,11 @@ import {
   getInstagramMediaLatest,
 } from "@/server/queries/marketing/instagram-insights";
 
-async function proxyMediaUrl(mediaUrl: string, fallbackType: string) {
+async function proxyMediaUrl(
+  mediaUrl: string,
+  fallbackType: string,
+  preferImage = false,
+) {
   const upstream = await fetch(mediaUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; ImbilGestao/1.0; +https://imbil.com.br)",
@@ -20,7 +24,11 @@ async function proxyMediaUrl(mediaUrl: string, fallbackType: string) {
 
   const contentType =
     upstream.headers.get("content-type") ??
-    (fallbackType === "VIDEO" || fallbackType === "REELS" ? "video/mp4" : "image/jpeg");
+    (preferImage
+      ? "image/jpeg"
+      : fallbackType === "VIDEO" || fallbackType === "REELS"
+        ? "video/mp4"
+        : "image/jpeg");
 
   return new Response(upstream.body, {
     status: 200,
@@ -48,7 +56,10 @@ export async function GET(
 
   const { mediaId } = await context.params;
   const decodedId = decodeURIComponent(mediaId);
-  const childId = new URL(request.url).searchParams.get("child");
+  const url = new URL(request.url);
+  const childId = url.searchParams.get("child");
+  // ?thumb=1 → servir a imagem de capa (thumbnail_url), ex.: para vídeos no grid.
+  const wantThumb = url.searchParams.get("thumb") === "1";
 
   let mediaUrl: string | null = null;
   let mediaType = "IMAGE";
@@ -62,7 +73,9 @@ export async function GET(
     if (!latest) {
       return new Response("Mídia não encontrada", { status: 404 });
     }
-    mediaUrl = latest.media_url ?? latest.thumbnail_url ?? null;
+    mediaUrl = wantThumb
+      ? (latest.thumbnail_url ?? latest.media_url ?? null)
+      : (latest.media_url ?? latest.thumbnail_url ?? null);
     mediaType = latest.media_type;
   }
 
@@ -70,7 +83,7 @@ export async function GET(
     return new Response("Mídia não encontrada", { status: 404 });
   }
 
-  const response = await proxyMediaUrl(mediaUrl, mediaType);
+  const response = await proxyMediaUrl(mediaUrl, mediaType, wantThumb);
   if (!response) {
     return new Response("Falha ao obter mídia do Instagram", { status: 502 });
   }

@@ -94,9 +94,22 @@ export type Database = {
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
       };
+      module_settings: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      report_requests: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
     };
     Views: {
       v_events_roi: {
+        Row: Record<string, unknown>;
+      };
+      v_followers_history: {
         Row: Record<string, unknown>;
       };
       v_ads_daily: {

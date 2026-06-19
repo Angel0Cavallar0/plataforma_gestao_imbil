@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { CalendarDays, Check, Loader2, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,12 +28,16 @@ function rangeFromFilters(filters: Filters): DateRange {
 export function AdSpendFilters({
   filters,
   showPlatformFilter = true,
+  defaultRange,
 }: {
   filters: Filters;
   showPlatformFilter?: boolean;
+  /** Período padrão (ex.: do relatório selecionado) usado em "Limpar". */
+  defaultRange?: { date_from: string; date_to: string };
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
 
   const [range, setRange] = useState<DateRange | undefined>(rangeFromFilters(filters));
@@ -65,13 +69,19 @@ export function AdSpendFilters({
   }
 
   function apply() {
-    const params = new URLSearchParams();
+    // Preserva params não relacionados (ex.: report/tipo do seletor de relatório).
+    const params = new URLSearchParams(searchParams.toString());
     if (range?.from) params.set("date_from", toIsoDate(range.from));
+    else params.delete("date_from");
     const end = range?.to ?? range?.from;
     if (end) params.set("date_to", toIsoDate(end));
+    else params.delete("date_to");
     if (search.trim()) params.set("search", search.trim());
+    else params.delete("search");
     if (showPlatformFilter && platforms.size !== AD_PLATFORM_SLUGS.length) {
       params.set("platforms", [...platforms].join(","));
+    } else {
+      params.delete("platforms");
     }
     const qs = params.toString();
     startTransition(() =>
@@ -80,11 +90,17 @@ export function AdSpendFilters({
   }
 
   function clear() {
-    const d = defaultDateRange();
+    const d = defaultRange ?? defaultDateRange();
     setRange({ from: fromIsoDate(d.date_from), to: fromIsoDate(d.date_to) });
     setSearch("");
     setPlatforms(new Set(AD_PLATFORM_SLUGS));
-    startTransition(() => router.push(pathname, { scroll: false }));
+    // Remove apenas os filtros desta barra, preservando report/tipo.
+    const params = new URLSearchParams(searchParams.toString());
+    for (const k of ["date_from", "date_to", "search", "platforms"]) params.delete(k);
+    const qs = params.toString();
+    startTransition(() =>
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false }),
+    );
   }
 
   const rangeLabel =
@@ -96,7 +112,7 @@ export function AdSpendFilters({
 
   // No padrão (mês atual, sem busca, todas as plataformas) o "Aplicar" fica
   // cinza; ao mudar qualquer filtro, ganha a cor principal indicando a ação.
-  const def = defaultDateRange();
+  const def = defaultRange ?? defaultDateRange();
   const isDefaultView =
     !!range?.from &&
     !!range?.to &&
