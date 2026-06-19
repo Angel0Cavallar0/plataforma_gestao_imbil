@@ -85,7 +85,7 @@ export async function CompetitorsSection({ period }: { period: DashboardPeriod }
             value: r.subscribers,
             color: r.isImbil ? IMBIL_COLOR : undefined,
           }))}
-          formatValue={(v) => v.toLocaleString("pt-BR")}
+          valueFormat="number"
         />
         <TrendsBenchmarkLine series={trends} />
       </div>

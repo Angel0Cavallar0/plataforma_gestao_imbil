@@ -83,7 +83,7 @@ export async function EventsSection({ period }: { period: DashboardPeriod }) {
         <SimpleBarChart
           title="Pipeline de eventos por status"
           data={pipelineData}
-          formatValue={(v) => int(v)}
+          valueFormat="int"
           emptyMessage="Nenhum evento cadastrado."
         />
         <UpcomingEventsTimeline events={upcoming} />

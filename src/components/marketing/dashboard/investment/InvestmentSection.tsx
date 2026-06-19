@@ -59,7 +59,7 @@ export async function InvestmentSection({ period }: { period: DashboardPeriod })
         <DonutChart
           title="Composição do investimento"
           data={composition}
-          formatValue={brl}
+          valueFormat="brl"
         />
         <InvestmentVsReturnTable rows={table} />
       </div>

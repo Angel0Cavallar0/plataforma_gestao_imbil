@@ -83,7 +83,7 @@ export async function AlertsSection({
           title="Alertas por fonte"
           horizontal
           data={bySource.map((s) => ({ name: s.source, value: s.count }))}
-          formatValue={(v) => int(v)}
+          valueFormat="int"
           emptyMessage="Sem alertas no período."
         />
       </div>

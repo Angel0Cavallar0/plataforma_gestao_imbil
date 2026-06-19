@@ -1,4 +1,4 @@
-import { fromIsoDate, toIsoDate } from "@/lib/marketing/ad-spend";
+import { brl, fromIsoDate, int, toIsoDate } from "@/lib/marketing/ad-spend";
 import type { DashboardPeriod, PeriodPreset } from "@/types/marketing-dashboard";
 
 export {
@@ -207,4 +207,25 @@ export function compact(value: number | null | undefined): string {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value);
+}
+
+/**
+ * Formato de valor serializável passado a gráficos client. Evita passar
+ * funções de Server → Client Components (proibido em RSC).
+ */
+export type ValueFormat = "number" | "brl" | "int" | "compact";
+
+/** Resolve um ValueFormat no formatador correspondente (uso no client). */
+export function resolveFormat(format: ValueFormat): (v: number) => string {
+  switch (format) {
+    case "brl":
+      return (v) => brl(v);
+    case "int":
+      return (v) => int(v);
+    case "compact":
+      return (v) => compact(v);
+    case "number":
+    default:
+      return (v) => v.toLocaleString("pt-BR");
+  }
 }

@@ -64,7 +64,7 @@ export async function PaidSection({ period }: { period: DashboardPeriod }) {
         <SimpleBarChart
           title="Investimento por plataforma"
           data={byPlatform.map((p) => ({ name: p.platform, value: p.spend }))}
-          formatValue={brl}
+          valueFormat="brl"
         />
         <ConversionFunnel data={funnel} />
       </div>

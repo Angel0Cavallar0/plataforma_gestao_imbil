@@ -3,7 +3,7 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
-import { channelColor } from "@/lib/marketing/dashboard";
+import { channelColor, resolveFormat, type ValueFormat } from "@/lib/marketing/dashboard";
 
 type Slice = { name: string; value: number };
 
@@ -11,17 +11,17 @@ type Slice = { name: string; value: number };
 export function DonutChart({
   title,
   data,
-  formatValue = (v) => v.toLocaleString("pt-BR"),
-  colorFor,
+  valueFormat = "number",
   emptyMessage = "Sem dados no período.",
 }: {
   title: string;
   data: Slice[];
-  formatValue?: (v: number) => string;
-  colorFor?: (name: string, index: number) => string;
+  /** Formato dos valores (serializável — não passar funções por RSC). */
+  valueFormat?: ValueFormat;
   emptyMessage?: string;
 }) {
-  const color = colorFor ?? channelColor;
+  const color = channelColor;
+  const formatValue = resolveFormat(valueFormat);
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (

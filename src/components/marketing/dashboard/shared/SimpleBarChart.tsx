@@ -12,7 +12,12 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltipContent } from "@/components/marketing/ad-spend/shared/ChartTooltipContent";
-import { channelColor, compact } from "@/lib/marketing/dashboard";
+import {
+  channelColor,
+  compact,
+  resolveFormat,
+  type ValueFormat,
+} from "@/lib/marketing/dashboard";
 
 export type BarDatum = { name: string; value: number; color?: string };
 
@@ -21,20 +26,20 @@ export function SimpleBarChart({
   title,
   data,
   horizontal = false,
-  formatValue = (v) => v.toLocaleString("pt-BR"),
-  colorFor,
+  valueFormat = "number",
   emptyMessage = "Sem dados no período.",
   height = "h-72",
 }: {
   title: string;
   data: BarDatum[];
   horizontal?: boolean;
-  formatValue?: (v: number) => string;
-  colorFor?: (name: string, index: number) => string;
+  /** Formato dos valores (serializável — não passar funções por RSC). */
+  valueFormat?: ValueFormat;
   emptyMessage?: string;
   height?: string;
 }) {
-  const color = colorFor ?? channelColor;
+  const color = channelColor;
+  const formatValue = resolveFormat(valueFormat);
 
   return (
     <Card>
