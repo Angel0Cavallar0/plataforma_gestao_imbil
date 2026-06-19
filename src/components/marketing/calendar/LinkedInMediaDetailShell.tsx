@@ -42,8 +42,14 @@ export function LinkedInMediaDetailShell({ latest, history }: Props) {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-6">
           <LinkedInPublishedPreview
+            postId={latest.post_id}
             text={latest.text}
-            thumbnailUrl={latest.thumbnail_url}
+            isVideo={Boolean(latest.thumbnail_storage_url)}
+            hasMedia={Boolean(
+              latest.media_storage_url ??
+                latest.thumbnail_storage_url ??
+                latest.thumbnail_url,
+            )}
           />
           {latest.permalink && (
             <a

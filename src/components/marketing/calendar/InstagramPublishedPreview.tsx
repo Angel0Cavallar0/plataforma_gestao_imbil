@@ -9,10 +9,13 @@ import { cn } from "@/lib/utils";
 
 const ACCOUNT_LABEL = "imbil";
 
-function instagramMediaProxyUrl(mediaId: string, childId?: string) {
+function instagramMediaProxyUrl(mediaId: string, childId?: string, thumb = false) {
   const base = `/api/marketing/instagram-media/${encodeURIComponent(mediaId)}`;
-  if (childId) return `${base}?child=${encodeURIComponent(childId)}`;
-  return base;
+  const params = new URLSearchParams();
+  if (childId) params.set("child", childId);
+  if (thumb) params.set("thumb", "1");
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
 function isVideoType(type: string, productType: string | null) {
@@ -30,26 +33,24 @@ function isCarouselType(type: string, productType: string | null) {
 function InstagramVideoFrame({
   mediaId,
   childId,
-  posterUrl,
 }: {
   mediaId: string;
   childId?: string;
-  posterUrl: string | null;
 }) {
   const [failed, setFailed] = useState(false);
+  // src → media_storage_url (.mp4 espelhado); poster → thumbnail_storage_url (capa).
   const src = instagramMediaProxyUrl(mediaId, childId);
+  const posterUrl = instagramMediaProxyUrl(mediaId, childId, true);
 
   if (failed) {
     return (
       <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-neutral-900 px-4 text-center text-sm text-neutral-300">
-        {posterUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={posterUrl}
-            alt=""
-            className="max-h-48 w-full object-contain opacity-80"
-          />
-        ) : null}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={posterUrl}
+          alt=""
+          className="max-h-48 w-full object-contain opacity-80"
+        />
         <p>Não foi possível reproduzir o vídeo. A URL pode ter expirado na origem.</p>
       </div>
     );
@@ -60,7 +61,7 @@ function InstagramVideoFrame({
       <video
         key={src}
         src={src}
-        poster={posterUrl ?? undefined}
+        poster={posterUrl}
         className="h-full w-full object-cover"
         controls
         playsInline
@@ -148,19 +149,13 @@ export function InstagramPublishedPreview({
       const childId = child.child_media_id;
       const childIsVideo = isVideoType(child.media_type, latest.media_product_type);
       if (childIsVideo) {
-        return (
-          <InstagramVideoFrame
-            mediaId={mediaId}
-            childId={childId}
-            posterUrl={child.thumbnail_url}
-          />
-        );
+        return <InstagramVideoFrame mediaId={mediaId} childId={childId} />;
       }
       return <InstagramImageFrame mediaId={mediaId} childId={childId} />;
     }
 
     if (isVideo) {
-      return <InstagramVideoFrame mediaId={mediaId} posterUrl={latest.thumbnail_url} />;
+      return <InstagramVideoFrame mediaId={mediaId} />;
     }
 
     return <InstagramImageFrame mediaId={mediaId} />;

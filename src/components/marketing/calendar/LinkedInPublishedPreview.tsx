@@ -1,17 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { SocialProfileAvatar } from "@/components/marketing/calendar/SocialProfileAvatar";
 
 const ACCOUNT_LABEL = "imbil";
 
+function linkedInMediaProxyUrl(postId: string, thumb = false) {
+  const base = `/api/marketing/linkedin-post/${encodeURIComponent(postId)}`;
+  return thumb ? `${base}?thumb=1` : base;
+}
+
 export function LinkedInPublishedPreview({
+  postId,
   text,
-  thumbnailUrl,
+  isVideo = false,
+  hasMedia = false,
 }: {
+  postId: string;
   text: string | null;
-  thumbnailUrl: string | null;
+  /** Vídeo → renderiza <video> com capa (thumbnail_storage_url). */
+  isVideo?: boolean;
+  /** Há mídia para exibir (bucket ou thumbnail legada). */
+  hasMedia?: boolean;
 }) {
+  const [failed, setFailed] = useState(false);
   const body = text?.trim() ?? "";
+  const showMedia = hasMedia && !failed;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-white text-black shadow-sm">
@@ -23,13 +37,28 @@ export function LinkedInPublishedPreview({
         </div>
       </div>
 
-      {thumbnailUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumbnailUrl}
-          alt="Mídia da publicação no LinkedIn"
-          className="aspect-[4/5] w-full bg-neutral-100 object-cover"
-        />
+      {showMedia ? (
+        isVideo ? (
+          <div className="relative aspect-[4/5] w-full bg-black">
+            <video
+              src={linkedInMediaProxyUrl(postId)}
+              poster={linkedInMediaProxyUrl(postId, true)}
+              className="h-full w-full object-cover"
+              controls
+              playsInline
+              preload="auto"
+              onError={() => setFailed(true)}
+            />
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={linkedInMediaProxyUrl(postId)}
+            alt="Mídia da publicação no LinkedIn"
+            className="aspect-[4/5] w-full bg-neutral-100 object-cover"
+            onError={() => setFailed(true)}
+          />
+        )
       ) : (
         <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-neutral-50 px-6 text-center">
           <p className="text-sm text-neutral-500">

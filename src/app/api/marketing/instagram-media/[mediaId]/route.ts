@@ -1,10 +1,13 @@
 import { getSession } from "@/lib/auth/session";
 import { requireMarketingPermission } from "@/lib/auth/marketing";
+import { createClient } from "@/lib/supabase/server";
+import { proxyMarketingStorageMedia } from "@/lib/marketing/media-storage";
 import {
   getInstagramCarouselChildById,
   getInstagramMediaLatest,
 } from "@/server/queries/marketing/instagram-insights";
 
+/** Fallback legado: proxy direto da CDN da Meta para linhas ainda sem mídia no bucket. */
 async function proxyMediaUrl(
   mediaUrl: string,
   fallbackType: string,
@@ -58,35 +61,53 @@ export async function GET(
   const decodedId = decodeURIComponent(mediaId);
   const url = new URL(request.url);
   const childId = url.searchParams.get("child");
-  // ?thumb=1 → servir a imagem de capa (thumbnail_url), ex.: para vídeos no grid.
+  // ?thumb=1 → servir a capa (thumbnail_storage_url), ex.: vídeos no grid/poster.
   const wantThumb = url.searchParams.get("thumb") === "1";
 
-  let mediaUrl: string | null = null;
+  let storageUrl: string | null = null;
+  let cdnUrl: string | null = null;
   let mediaType = "IMAGE";
 
   if (childId) {
     const child = await getInstagramCarouselChildById(childId);
-    mediaUrl = child?.media_url ?? child?.thumbnail_url ?? null;
-    mediaType = child?.media_type ?? "IMAGE";
+    if (!child) {
+      return new Response("Mídia não encontrada", { status: 404 });
+    }
+    mediaType = child.media_type ?? "IMAGE";
+    storageUrl = wantThumb
+      ? (child.thumbnail_storage_url ?? child.media_storage_url)
+      : (child.media_storage_url ?? child.thumbnail_storage_url);
+    cdnUrl = wantThumb
+      ? (child.thumbnail_url ?? child.media_url)
+      : (child.media_url ?? child.thumbnail_url);
   } else {
     const latest = await getInstagramMediaLatest(decodedId);
     if (!latest) {
       return new Response("Mídia não encontrada", { status: 404 });
     }
-    mediaUrl = wantThumb
-      ? (latest.thumbnail_url ?? latest.media_url ?? null)
-      : (latest.media_url ?? latest.thumbnail_url ?? null);
     mediaType = latest.media_type;
+    storageUrl = wantThumb
+      ? (latest.thumbnail_storage_url ?? latest.media_storage_url)
+      : (latest.media_storage_url ?? latest.thumbnail_storage_url);
+    cdnUrl = wantThumb
+      ? (latest.thumbnail_url ?? latest.media_url)
+      : (latest.media_url ?? latest.thumbnail_url);
   }
 
-  if (!mediaUrl) {
-    return new Response("Mídia não encontrada", { status: 404 });
+  // Preferir a mídia espelhada no bucket privado (URL assinada + proxy).
+  const supabase = await createClient();
+  const fromStorage = await proxyMarketingStorageMedia(supabase, storageUrl);
+  if (fromStorage) {
+    return fromStorage;
   }
 
-  const response = await proxyMediaUrl(mediaUrl, mediaType, wantThumb);
-  if (!response) {
-    return new Response("Falha ao obter mídia do Instagram", { status: 502 });
+  // Fallback: CDN da Meta (linhas ainda não espelhadas).
+  if (cdnUrl) {
+    const fromCdn = await proxyMediaUrl(cdnUrl, mediaType, wantThumb);
+    if (fromCdn) {
+      return fromCdn;
+    }
   }
 
-  return response;
+  return new Response("Mídia não encontrada", { status: 404 });
 }

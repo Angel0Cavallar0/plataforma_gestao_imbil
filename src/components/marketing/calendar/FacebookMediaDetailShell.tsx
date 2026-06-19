@@ -67,7 +67,14 @@ export function FacebookMediaDetailShell({
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-6">
-          {crossPostPreview ? (
+          {latest.media_storage_url ? (
+            <FacebookPublishedPreview
+              postId={postId}
+              message={latest.message}
+              isVideo={Boolean(latest.thumbnail_storage_url)}
+              hasMedia
+            />
+          ) : crossPostPreview ? (
             <InstagramPublishedPreview
               mediaId={crossPostPreview.instagramMediaId}
               latest={crossPostPreview.latest}
@@ -76,7 +83,7 @@ export function FacebookMediaDetailShell({
               mediaSubLabel="Mídia do Instagram · texto do Facebook"
             />
           ) : (
-            <FacebookPublishedPreview message={latest.message} />
+            <FacebookPublishedPreview postId={postId} message={latest.message} />
           )}
           {latest.permalink && (
             <a
