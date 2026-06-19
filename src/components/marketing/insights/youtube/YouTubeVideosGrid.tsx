@@ -22,6 +22,30 @@ function videoUrl(id: string) {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 }
 
+/** Thumbnail do vídeo via proxy interno (CSP-safe); placeholder em caso de falha. */
+function VideoThumb({ videoId }: { videoId: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="flex aspect-video items-center justify-center rounded-md border bg-muted">
+        <Play className="h-8 w-8 text-muted-foreground" />
+      </div>
+    );
+  }
+  return (
+    <div className="aspect-video overflow-hidden rounded-md border bg-muted">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/api/marketing/youtube-thumb/${encodeURIComponent(videoId)}`}
+        alt=""
+        className="h-full w-full object-cover"
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
 /** Grid de vídeos do canal, ordenável (Seção 5.1). */
 export function YouTubeVideosGrid({ videos }: { videos: YouTubeVideo[] }) {
   const [sort, setSort] = useState<SortKey>("published_at");
@@ -66,9 +90,7 @@ export function YouTubeVideosGrid({ videos }: { videos: YouTubeVideo[] }) {
           {sorted.map((v) => (
             <Card key={v.video_id}>
               <CardContent className="space-y-2 p-3">
-                <div className="flex aspect-video items-center justify-center rounded-md border bg-muted">
-                  <Play className="h-8 w-8 text-muted-foreground" />
-                </div>
+                <VideoThumb videoId={v.video_id} />
                 <p className="line-clamp-2 text-sm font-medium">
                   {truncate(v.title, 90) || "Sem título"}
                 </p>
