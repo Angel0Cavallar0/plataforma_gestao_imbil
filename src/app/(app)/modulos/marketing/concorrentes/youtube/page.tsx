@@ -7,6 +7,7 @@ import { firstParam } from "@/lib/marketing/competitors";
 import {
   getCompetitors,
   getCompetitorsOverview,
+  getImbilYoutubeSubscribers,
   getYoutubeVideos,
 } from "@/server/queries/marketing/competitors";
 
@@ -18,10 +19,11 @@ export default async function ConcorrentesYoutubePage({
   const sp = await searchParams;
   const competitorId = firstParam(sp.competitor);
 
-  const [competitors, overview, videos] = await Promise.all([
+  const [competitors, overview, videos, imbilSubscribers] = await Promise.all([
     getCompetitors(),
     getCompetitorsOverview(),
     getYoutubeVideos(competitorId, 60),
+    getImbilYoutubeSubscribers(),
   ]);
 
   const avgViewsBars = overview
@@ -45,7 +47,11 @@ export default async function ConcorrentesYoutubePage({
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Inscritos no YouTube</h2>
-        <YtSubscribersCards rows={overview} />
+        <YtSubscribersCards
+          rows={overview}
+          imbilSubscribers={imbilSubscribers}
+          colorOverrides={{ Dancor: "#db2777" }}
+        />
       </div>
 
       <CompetitorBars

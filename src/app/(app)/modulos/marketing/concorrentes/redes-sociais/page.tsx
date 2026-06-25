@@ -8,6 +8,7 @@ import {
   getCompetitors,
   getCompetitorsOverview,
   getIgPosts,
+  getImbilIgFollowers,
 } from "@/server/queries/marketing/competitors";
 
 export default async function ConcorrentesRedesSociaisPage({
@@ -18,11 +19,12 @@ export default async function ConcorrentesRedesSociaisPage({
   const sp = await searchParams;
   const competitorId = firstParam(sp.competitor);
 
-  const [competitors, overview, posts, allPosts] = await Promise.all([
+  const [competitors, overview, posts, allPosts, imbilFollowers] = await Promise.all([
     getCompetitors(),
     getCompetitorsOverview(),
     getIgPosts(competitorId, 60),
     getIgPosts(undefined, 500),
+    getImbilIgFollowers(),
   ]);
 
   // Engajamento médio por concorrente (likes + comentários).
@@ -53,7 +55,7 @@ export default async function ConcorrentesRedesSociaisPage({
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Seguidores no Instagram</h2>
-        <IgFollowersCards rows={overview} />
+        <IgFollowersCards rows={overview} imbilFollowers={imbilFollowers} />
       </div>
 
       <CompetitorBars

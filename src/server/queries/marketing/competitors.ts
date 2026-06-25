@@ -87,6 +87,20 @@ export async function getLastCollectedAt(): Promise<string | null> {
 // Instagram
 // ---------------------------------------------------------------------------
 
+/** Total de seguidores no Instagram da própria IMBIL (último snapshot). */
+export async function getImbilIgFollowers(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_organic_insights")
+    .select("followers_count")
+    .not("followers_count", "is", null)
+    .order("data_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { followers_count: number } | null)?.followers_count ?? null;
+}
+
 export async function getIgPosts(competitorId?: string, limit = 60): Promise<IgPost[]> {
   const supabase = await createClient();
   let q = marketingSchema(supabase)
@@ -148,6 +162,20 @@ export async function getIgFollowersTrend(
 // ---------------------------------------------------------------------------
 // YouTube
 // ---------------------------------------------------------------------------
+
+/** Total de inscritos no YouTube da própria IMBIL (último snapshot). */
+export async function getImbilYoutubeSubscribers(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("imbil_youtube_stats")
+    .select("subscriber_count")
+    .not("subscriber_count", "is", null)
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { subscriber_count: number } | null)?.subscriber_count ?? null;
+}
 
 export async function getYoutubeStats(competitorId?: string): Promise<YoutubeStat[]> {
   const supabase = await createClient();
