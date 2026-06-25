@@ -4,6 +4,12 @@
 /** Nome usado pela própria Imbil nas tabelas de busca/tendências (join por texto). */
 export const IMBIL_NAME = "IMBIL";
 
+/**
+ * Id sintético da própria IMBIL (benchmark). Não existe em marketing.competitors
+ * — usado para incluir a IMBIL em seletores/feeds ao lado dos concorrentes.
+ */
+export const IMBIL_ID = "imbil";
+
 export type Competitor = {
   id: string;
   name: string;

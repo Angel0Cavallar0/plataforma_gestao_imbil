@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { marketingSchema } from "@/lib/supabase/marketing";
-import { IMBIL_NAME } from "@/types/marketing-competitors";
+import { IMBIL_ID, IMBIL_NAME } from "@/types/marketing-competitors";
 import type {
   Competitor,
   CompetitorAd,
@@ -407,6 +407,46 @@ export async function getCompetitorReviews(
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as CompetitorReview[];
+}
+
+/**
+ * Reviews do Google Maps da própria IMBIL (de marketing.brand_mentions).
+ * Mapeadas para o formato CompetitorReview com competitor_id sintético (IMBIL_ID),
+ * para serem exibidas ao lado das reviews dos concorrentes.
+ */
+export async function getImbilReviews(rating?: number): Promise<CompetitorReview[]> {
+  const supabase = await createClient();
+  let q = marketingSchema(supabase)
+    .from("brand_mentions")
+    .select(
+      "id, mention_id, rating, texto, autor_nome, imagem_autor_url, data_publicacao, url",
+    )
+    .eq("plataforma", "google_maps")
+    .order("data_publicacao", { ascending: false, nullsFirst: false });
+  if (rating) q = q.eq("rating", rating);
+  const { data, error } = await q;
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    mention_id: string | null;
+    rating: number | null;
+    texto: string | null;
+    autor_nome: string | null;
+    imagem_autor_url: string | null;
+    data_publicacao: string | null;
+    url: string | null;
+  }[];
+  return rows.map((r) => ({
+    id: r.id,
+    competitor_id: IMBIL_ID,
+    review_id: r.mention_id ?? r.id,
+    rating: r.rating,
+    texto: r.texto,
+    autor_nome: r.autor_nome,
+    imagem_autor_url: r.imagem_autor_url,
+    data_publicacao: r.data_publicacao,
+    url: r.url,
+  }));
 }
 
 // ---------------------------------------------------------------------------
