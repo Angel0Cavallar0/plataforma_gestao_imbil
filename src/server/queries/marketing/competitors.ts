@@ -101,6 +101,24 @@ export async function getImbilIgFollowers(): Promise<number | null> {
   return (data as { followers_count: number } | null)?.followers_count ?? null;
 }
 
+/**
+ * Engajamento médio da IMBIL no Instagram — média de `total_interactions` por dia
+ * (de marketing.instagram_organic_insights), comparável ao engajamento médio por
+ * post dos concorrentes.
+ */
+export async function getImbilEngagement(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_organic_insights")
+    .select("total_interactions")
+    .not("total_interactions", "is", null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as { total_interactions: number }[];
+  if (!rows.length) return null;
+  const sum = rows.reduce((acc, r) => acc + r.total_interactions, 0);
+  return sum / rows.length;
+}
+
 export async function getIgPosts(competitorId?: string, limit = 60): Promise<IgPost[]> {
   const supabase = await createClient();
   let q = marketingSchema(supabase)
