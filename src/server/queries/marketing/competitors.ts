@@ -52,6 +52,60 @@ export async function getCompetitorsOverview(): Promise<CompetitorOverview[]> {
   return (data ?? []) as unknown as CompetitorOverview[];
 }
 
+/**
+ * Linha "overview" sintética da própria IMBIL, montada a partir das tabelas
+ * dedicadas (instagram_organic_insights, imbil_youtube_stats, brand_mentions).
+ * A IMBIL não existe em v_competitors_overview; usamos esta linha para incluí-la
+ * nas comparações (tabela e gráficos) ao lado dos concorrentes.
+ */
+export async function getImbilOverview(): Promise<CompetitorOverview> {
+  const supabase = await createClient();
+  const mk = marketingSchema(supabase);
+  const [igRes, ytRes, ratingAgg] = await Promise.all([
+    mk
+      .from("instagram_organic_insights")
+      .select("followers_count")
+      .not("followers_count", "is", null)
+      .order("data_referencia", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    mk
+      .from("imbil_youtube_stats")
+      .select("subscriber_count, view_count, video_count")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getImbilRating(),
+  ]);
+
+  const ig = igRes.data as { followers_count: number } | null;
+  const yt = ytRes.data as {
+    subscriber_count: number | null;
+    view_count: number | null;
+    video_count: number | null;
+  } | null;
+
+  return {
+    id: IMBIL_ID,
+    name: IMBIL_NAME,
+    google_rating: ratingAgg.rating,
+    google_reviews_count: ratingAgg.reviewsCount,
+    active: true,
+    ig_handle: null,
+    yt_handle: null,
+    website_url: null,
+    profile_updated_at: null,
+    yt_subscribers: yt?.subscriber_count ?? null,
+    yt_views: yt?.view_count ?? null,
+    yt_videos: yt?.video_count ?? null,
+    ig_followers: ig?.followers_count ?? null,
+    ig_posts_collected: null,
+    active_ads: null,
+    reviews_collected: ratingAgg.reviewsCount,
+    news_collected: null,
+  };
+}
+
 /** Data/hora da coleta mais recente entre as fontes (para "dados atualizados em"). */
 export async function getLastCollectedAt(): Promise<string | null> {
   const supabase = await createClient();

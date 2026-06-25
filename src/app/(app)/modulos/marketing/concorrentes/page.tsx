@@ -6,14 +6,19 @@ import { YouTubeRankingBars } from "@/components/marketing/competitors/overview/
 import { RatingComparisonBars } from "@/components/marketing/competitors/overview/RatingComparisonBars";
 import {
   getCompetitorsOverview,
+  getImbilOverview,
   getLastCollectedAt,
 } from "@/server/queries/marketing/competitors";
 
 export default async function ConcorrentesPage() {
-  const [overview, lastCollectedAt] = await Promise.all([
+  const [overview, imbilOverview, lastCollectedAt] = await Promise.all([
     getCompetitorsOverview(),
+    getImbilOverview(),
     getLastCollectedAt(),
   ]);
+
+  // IMBIL anexada ao fim (não desloca as cores indexadas dos concorrentes nos gráficos).
+  const overviewWithImbil = [...overview, imbilOverview];
 
   return (
     <div className="space-y-6">
@@ -33,12 +38,12 @@ export default async function ConcorrentesPage() {
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Comparativo</h2>
-        <CompetitorsComparisonTable rows={overview} />
+        <CompetitorsComparisonTable rows={overviewWithImbil} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <YouTubeRankingBars rows={overview} />
-        <RatingComparisonBars rows={overview} />
+        <YouTubeRankingBars rows={overviewWithImbil} />
+        <RatingComparisonBars rows={overviewWithImbil} />
       </div>
     </div>
   );

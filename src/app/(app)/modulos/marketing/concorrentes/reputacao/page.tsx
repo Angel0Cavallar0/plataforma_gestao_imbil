@@ -9,14 +9,13 @@ import {
   getCompetitorReviews,
   getCompetitors,
   getCompetitorsOverview,
-  getImbilRating,
+  getImbilOverview,
   getImbilReviews,
 } from "@/server/queries/marketing/competitors";
 import {
   IMBIL_ID,
   IMBIL_NAME,
   type Competitor,
-  type CompetitorOverview,
   type CompetitorReview,
 } from "@/types/marketing-competitors";
 
@@ -52,11 +51,11 @@ export default async function ConcorrentesReputacaoPage({
 
   const isImbilSelected = competitorId === IMBIL_ID;
 
-  const [competitors, overview, imbilRating, competitorReviews, imbilReviews] =
+  const [competitors, overview, imbilOverview, competitorReviews, imbilReviews] =
     await Promise.all([
       getCompetitors(),
       getCompetitorsOverview(),
-      getImbilRating(),
+      getImbilOverview(),
       // Reviews dos concorrentes — omitidas quando só a IMBIL está selecionada.
       isImbilSelected
         ? Promise.resolve<CompetitorReview[]>([])
@@ -67,27 +66,8 @@ export default async function ConcorrentesReputacaoPage({
         : getImbilReviews(rating),
     ]);
 
-  // Linha sintética da IMBIL para o gráfico "Rating no Google" (média das reviews).
-  const imbilOverview: CompetitorOverview = {
-    id: IMBIL_ID,
-    name: IMBIL_NAME,
-    google_rating: imbilRating.rating,
-    google_reviews_count: imbilRating.reviewsCount,
-    active: true,
-    ig_handle: null,
-    yt_handle: null,
-    website_url: null,
-    profile_updated_at: null,
-    yt_subscribers: null,
-    yt_views: null,
-    yt_videos: null,
-    ig_followers: null,
-    ig_posts_collected: null,
-    active_ads: null,
-    reviews_collected: imbilRating.reviewsCount,
-    news_collected: null,
-  };
-  const overviewWithImbil = [imbilOverview, ...overview];
+  // IMBIL no gráfico "Rating no Google"; anexada ao fim para não deslocar as cores.
+  const overviewWithImbil = [...overview, imbilOverview];
 
   // IMBIL primeiro no seletor/feed; reviews ordenadas por data (mais recentes no topo).
   const competitorsWithImbil = [IMBIL_COMPETITOR, ...competitors];

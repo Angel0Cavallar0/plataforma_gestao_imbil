@@ -18,6 +18,7 @@ export const IMBIL_COLOR = "#dc2626";
 /** Overrides de cor por nome de empresa (cores fixas independentes do índice). */
 const COLOR_OVERRIDES: Record<string, string> = {
   Flowserve: "#eab308", // tom amarelado
+  Sulzer: "#4f46e5", // índigo — evita o vermelho (reservado à Imbil)
 };
 
 /** Cor estável e determinística por nome de empresa. Imbil sempre destacada. */
