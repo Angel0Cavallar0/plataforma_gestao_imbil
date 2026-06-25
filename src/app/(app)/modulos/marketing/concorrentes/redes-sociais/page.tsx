@@ -8,7 +8,10 @@ import {
   getCompetitors,
   getCompetitorsOverview,
   getIgPosts,
+  getImbilEngagement,
+  getImbilIgFollowers,
 } from "@/server/queries/marketing/competitors";
+import { IMBIL_NAME } from "@/types/marketing-competitors";
 
 export default async function ConcorrentesRedesSociaisPage({
   searchParams,
@@ -18,12 +21,15 @@ export default async function ConcorrentesRedesSociaisPage({
   const sp = await searchParams;
   const competitorId = firstParam(sp.competitor);
 
-  const [competitors, overview, posts, allPosts] = await Promise.all([
-    getCompetitors(),
-    getCompetitorsOverview(),
-    getIgPosts(competitorId, 60),
-    getIgPosts(undefined, 500),
-  ]);
+  const [competitors, overview, posts, allPosts, imbilFollowers, imbilEngagement] =
+    await Promise.all([
+      getCompetitors(),
+      getCompetitorsOverview(),
+      getIgPosts(competitorId, 60),
+      getIgPosts(undefined, 500),
+      getImbilIgFollowers(),
+      getImbilEngagement(),
+    ]);
 
   // Engajamento médio por concorrente (likes + comentários).
   const nameById = new Map(competitors.map((c) => [c.id, c.name]));
@@ -38,6 +44,10 @@ export default async function ConcorrentesRedesSociaisPage({
     name: nameById.get(id) ?? "—",
     value: a.n ? Math.round(a.total / a.n) : 0,
   }));
+  // IMBIL: engajamento médio diário (total_interactions) ao lado dos concorrentes.
+  if (imbilEngagement != null) {
+    engagement.push({ name: IMBIL_NAME, value: Math.round(imbilEngagement) });
+  }
 
   return (
     <div className="space-y-6">
@@ -53,7 +63,7 @@ export default async function ConcorrentesRedesSociaisPage({
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Seguidores no Instagram</h2>
-        <IgFollowersCards rows={overview} />
+        <IgFollowersCards rows={overview} imbilFollowers={imbilFollowers} />
       </div>
 
       <CompetitorBars

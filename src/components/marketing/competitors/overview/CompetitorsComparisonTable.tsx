@@ -6,6 +6,7 @@ import { ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNumber, formatRating } from "@/lib/marketing/competitors";
 import { StarRating } from "../shared/StarRating";
+import { IMBIL_ID } from "@/types/marketing-competitors";
 import type { CompetitorOverview } from "@/types/marketing-competitors";
 
 type SortKey =
@@ -94,12 +95,17 @@ export function CompetitorsComparisonTable({ rows }: { rows: CompetitorOverview[
           {sorted.map((r) => (
             <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
               <td className="px-4 py-2">
-                <Link
-                  href={`${BASE}/${r.id}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {r.name}
-                </Link>
+                {r.id === IMBIL_ID ? (
+                  // IMBIL não tem página de perfil (não é um concorrente coletado).
+                  <span className="font-medium">{r.name}</span>
+                ) : (
+                  <Link
+                    href={`${BASE}/${r.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {r.name}
+                  </Link>
+                )}
               </td>
               <td className="px-4 py-2 text-right">
                 <span className="inline-flex items-center justify-end gap-1.5">

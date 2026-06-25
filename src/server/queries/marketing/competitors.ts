@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { marketingSchema } from "@/lib/supabase/marketing";
-import { IMBIL_NAME } from "@/types/marketing-competitors";
+import { IMBIL_ID, IMBIL_NAME } from "@/types/marketing-competitors";
 import type {
   Competitor,
   CompetitorAd,
@@ -52,6 +52,60 @@ export async function getCompetitorsOverview(): Promise<CompetitorOverview[]> {
   return (data ?? []) as unknown as CompetitorOverview[];
 }
 
+/**
+ * Linha "overview" sintética da própria IMBIL, montada a partir das tabelas
+ * dedicadas (instagram_organic_insights, imbil_youtube_stats, brand_mentions).
+ * A IMBIL não existe em v_competitors_overview; usamos esta linha para incluí-la
+ * nas comparações (tabela e gráficos) ao lado dos concorrentes.
+ */
+export async function getImbilOverview(): Promise<CompetitorOverview> {
+  const supabase = await createClient();
+  const mk = marketingSchema(supabase);
+  const [igRes, ytRes, ratingAgg] = await Promise.all([
+    mk
+      .from("instagram_organic_insights")
+      .select("followers_count")
+      .not("followers_count", "is", null)
+      .order("data_referencia", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    mk
+      .from("imbil_youtube_stats")
+      .select("subscriber_count, view_count, video_count")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getImbilRating(),
+  ]);
+
+  const ig = igRes.data as { followers_count: number } | null;
+  const yt = ytRes.data as {
+    subscriber_count: number | null;
+    view_count: number | null;
+    video_count: number | null;
+  } | null;
+
+  return {
+    id: IMBIL_ID,
+    name: IMBIL_NAME,
+    google_rating: ratingAgg.rating,
+    google_reviews_count: ratingAgg.reviewsCount,
+    active: true,
+    ig_handle: null,
+    yt_handle: null,
+    website_url: null,
+    profile_updated_at: null,
+    yt_subscribers: yt?.subscriber_count ?? null,
+    yt_views: yt?.view_count ?? null,
+    yt_videos: yt?.video_count ?? null,
+    ig_followers: ig?.followers_count ?? null,
+    ig_posts_collected: null,
+    active_ads: null,
+    reviews_collected: ratingAgg.reviewsCount,
+    news_collected: null,
+  };
+}
+
 /** Data/hora da coleta mais recente entre as fontes (para "dados atualizados em"). */
 export async function getLastCollectedAt(): Promise<string | null> {
   const supabase = await createClient();
@@ -86,6 +140,38 @@ export async function getLastCollectedAt(): Promise<string | null> {
 // ---------------------------------------------------------------------------
 // Instagram
 // ---------------------------------------------------------------------------
+
+/** Total de seguidores no Instagram da própria IMBIL (último snapshot). */
+export async function getImbilIgFollowers(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_organic_insights")
+    .select("followers_count")
+    .not("followers_count", "is", null)
+    .order("data_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { followers_count: number } | null)?.followers_count ?? null;
+}
+
+/**
+ * Engajamento médio da IMBIL no Instagram — média de `total_interactions` por dia
+ * (de marketing.instagram_organic_insights), comparável ao engajamento médio por
+ * post dos concorrentes.
+ */
+export async function getImbilEngagement(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("instagram_organic_insights")
+    .select("total_interactions")
+    .not("total_interactions", "is", null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as { total_interactions: number }[];
+  if (!rows.length) return null;
+  const sum = rows.reduce((acc, r) => acc + r.total_interactions, 0);
+  return sum / rows.length;
+}
 
 export async function getIgPosts(competitorId?: string, limit = 60): Promise<IgPost[]> {
   const supabase = await createClient();
@@ -148,6 +234,20 @@ export async function getIgFollowersTrend(
 // ---------------------------------------------------------------------------
 // YouTube
 // ---------------------------------------------------------------------------
+
+/** Total de inscritos no YouTube da própria IMBIL (último snapshot). */
+export async function getImbilYoutubeSubscribers(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("imbil_youtube_stats")
+    .select("subscriber_count")
+    .not("subscriber_count", "is", null)
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { subscriber_count: number } | null)?.subscriber_count ?? null;
+}
 
 export async function getYoutubeStats(competitorId?: string): Promise<YoutubeStat[]> {
   const supabase = await createClient();
@@ -379,6 +479,67 @@ export async function getCompetitorReviews(
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as CompetitorReview[];
+}
+
+/**
+ * Rating médio e nº de reviews do Google Maps da própria IMBIL (de brand_mentions).
+ * A IMBIL não existe em v_competitors_overview; usamos a média das reviews coletadas.
+ */
+export async function getImbilRating(): Promise<{
+  rating: number | null;
+  reviewsCount: number;
+}> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("brand_mentions")
+    .select("rating")
+    .eq("plataforma", "google_maps")
+    .not("rating", "is", null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as { rating: number }[];
+  if (!rows.length) return { rating: null, reviewsCount: 0 };
+  const sum = rows.reduce((acc, r) => acc + r.rating, 0);
+  return { rating: sum / rows.length, reviewsCount: rows.length };
+}
+
+/**
+ * Reviews do Google Maps da própria IMBIL (de marketing.brand_mentions).
+ * Mapeadas para o formato CompetitorReview com competitor_id sintético (IMBIL_ID),
+ * para serem exibidas ao lado das reviews dos concorrentes.
+ */
+export async function getImbilReviews(rating?: number): Promise<CompetitorReview[]> {
+  const supabase = await createClient();
+  let q = marketingSchema(supabase)
+    .from("brand_mentions")
+    .select(
+      "id, mention_id, rating, texto, autor_nome, imagem_autor_url, data_publicacao, url",
+    )
+    .eq("plataforma", "google_maps")
+    .order("data_publicacao", { ascending: false, nullsFirst: false });
+  if (rating) q = q.eq("rating", rating);
+  const { data, error } = await q;
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    mention_id: string | null;
+    rating: number | null;
+    texto: string | null;
+    autor_nome: string | null;
+    imagem_autor_url: string | null;
+    data_publicacao: string | null;
+    url: string | null;
+  }[];
+  return rows.map((r) => ({
+    id: r.id,
+    competitor_id: IMBIL_ID,
+    review_id: r.mention_id ?? r.id,
+    rating: r.rating,
+    texto: r.texto,
+    autor_nome: r.autor_nome,
+    imagem_autor_url: r.imagem_autor_url,
+    data_publicacao: r.data_publicacao,
+    url: r.url,
+  }));
 }
 
 // ---------------------------------------------------------------------------
