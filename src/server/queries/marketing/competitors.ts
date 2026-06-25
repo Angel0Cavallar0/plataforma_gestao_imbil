@@ -410,6 +410,27 @@ export async function getCompetitorReviews(
 }
 
 /**
+ * Rating médio e nº de reviews do Google Maps da própria IMBIL (de brand_mentions).
+ * A IMBIL não existe em v_competitors_overview; usamos a média das reviews coletadas.
+ */
+export async function getImbilRating(): Promise<{
+  rating: number | null;
+  reviewsCount: number;
+}> {
+  const supabase = await createClient();
+  const { data, error } = await marketingSchema(supabase)
+    .from("brand_mentions")
+    .select("rating")
+    .eq("plataforma", "google_maps")
+    .not("rating", "is", null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as { rating: number }[];
+  if (!rows.length) return { rating: null, reviewsCount: 0 };
+  const sum = rows.reduce((acc, r) => acc + r.rating, 0);
+  return { rating: sum / rows.length, reviewsCount: rows.length };
+}
+
+/**
  * Reviews do Google Maps da própria IMBIL (de marketing.brand_mentions).
  * Mapeadas para o formato CompetitorReview com competitor_id sintético (IMBIL_ID),
  * para serem exibidas ao lado das reviews dos concorrentes.
